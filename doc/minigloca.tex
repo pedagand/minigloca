@@ -1,0 +1,62 @@
+\documentclass[a4paper, 12pt]{article}
+
+\usepackage[francais]{babel}
+\usepackage{amssymb}
+\usepackage{amsmath}
+
+\title{Minigloca}
+\author{Vladislas de Haldat}
+
+\begin{document}
+
+\maketitle
+\newpage
+\tableofcontents
+\newpage
+
+\section{Un langage impératif simple}
+Pour commencer, définissons une syntaxe abstraite minimale que nous utiliserons tout le long de cette étude. Cette syntaxe se composera de trois blocs fondamentaux que sont les expressions arithmétiques, les expressions booléennes ainsi que les déclarations. Nous n'incluons pas pour le moment la déclaration de routines au sein de cette syntaxe.
+
+\subsection{Expressions arithmétiques}
+Les expressions arithmétiques sont définies sur l'ensemble des entiers relatifs. On se donne les opérateurs de l'addition, de la soustraction ainsi que de la multiplication. À ces opérateurs l'on pourra appliquer des entiers ainsi que des identifiants de variables.
+
+\begin{align*}
+Int &\rightarrow n &n \in \mathbb{Z}\\
+Id &\rightarrow x \mid y \mid z \mid \cdots \\
+a &\rightarrow Int \mid Id \mid op_A(a_1, a_2) &op_A \in \{+, -, \times\}
+\end{align*}
+
+L'identifiant d'une variable est, de manière générale, une chaîne de caractères.
+
+\subsection{Expressions booléennes}
+Les expressions booléennes nous permettent d'introduire la comparaison entre deux expressions arithmétiques, ainsi que les opérateurs booléens sur les expressions booléennes.
+
+\begin{align*}
+b & \rightarrow \textbf{true} \mid \textbf{false} & \\
+  & \mid op_R(a_1, a_2) & op_R \in \{<, =\} \\
+  & \mid op_B(b_1, b_2) & op_B \in \{\wedge, \vee\} \\
+  & \mid \neg b &
+\end{align*}
+
+\subsection{Déclarations}
+Les déclarations sont définies de la manière suivante:
+
+\begin{align*}
+s & \rightarrow Id := a \\
+  & \mid s_1 \text{ ; } s_2 \\
+  & \mid \\
+  & \mid \text{if } b \text{ then } s_1 \text{ else } s_2 \\
+  & \mid \text{while } b \text{ do } s_1
+\end{align*}
+
+\subsection{Implementation}
+L'implémentation est écrite en OCaml, chaque bloc énoncé ci-dessus sera représenté par un type.
+
+\subsection{Exemples}
+
+\subsection{Arbre de syntaxe abstraite}
+Ce modèle de représentation permet de construire un arbre de syntaxe abstraite du programme en question. Cet objet nous servira lors des différentes analyses qui seront effectuées, et notamment l'analyse par flot de contrôle. Cette dernière ne requièrant pas la connaissance de l'ordre d'exécution du programme, les AST sont particulièrement adaptés.
+
+\subsection{Graphe de flot de contrôle}
+
+\end{document}

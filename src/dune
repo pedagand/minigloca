@@ -1,0 +1,5 @@
+(env (_ (flags :standard -w -27-26-32-33)))
+(executable 
+ (name Minigloca) 
+ (preprocess (pps ppx_deriving.show ppx_deriving.ord ppx_deriving.eq))
+ (libraries ppx_deriving alcotest pprint))
