@@ -7,11 +7,7 @@ type a = Int of int
     | Plus of a * a
     | Minus of a * a
     | Times of a * a 
-    [@@deriving show, eq, ord]
-
-let (+) a_1 a_2 = Plus(a_1, a_2)
-let (-) a_1 a_2 = Minus(a_1, a_2)
-let ( * ) a_1 a_2 = Times(a_1, a_2)
+    [@@deriving show, eq]
 
 let rec aexpToString a =
     match a with
@@ -29,7 +25,7 @@ type b = True | False
     | And of b * b
     | Or of b * b
     | Not of b
-    [@@deriving show, eq, ord]
+    [@@deriving show, eq]
 
 let (<) a_1 a_2 = Lt(a_1, a_2)
 let (=) a_1 a_2 = Eq(a_1, a_2)
@@ -40,12 +36,13 @@ let neg b = Not b
 
 (* Statements *)
 
-type s = Assign of string * a
-    | Seq of s * s
-    | Ifte of b * s * s
-    | While of b * s
-    | Skip 
-    [@@deriving show, eq, ord]
+type label = int [@@deriving show, eq]
 
-type label = int
-type 'a labelled = 'a * label
+type s = Assign of string * a * label
+    | Seq of s * s
+    | Ifte of b * s * s * label
+    | While of b * s * label
+    | Skip 
+    [@@deriving show, eq]
+
+type labelled = s * label
