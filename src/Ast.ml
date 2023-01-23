@@ -27,16 +27,10 @@ type b = True | False
     | Not of b
     [@@deriving show, eq]
 
-let (<) a_1 a_2 = Lt(a_1, a_2)
-let (=) a_1 a_2 = Eq(a_1, a_2)
-
-let (&&) b_1 b_2 = And(b_1, b_2)
-let (||) b_1 b_2 = Or(b_1, b_2)
-let neg b = Not b
-
 (* Statements *)
 
 type label = int [@@deriving show, eq]
+type 'a labelled = 'a * label
 
 type s = Assign of string * a * label
     | Seq of s * s
@@ -45,4 +39,26 @@ type s = Assign of string * a * label
     | Skip 
     [@@deriving show, eq]
 
-type labelled = s * label
+let fl = ref 0
+let fetch () =  
+        fl := !fl + 1;
+        !fl
+
+module Syntax = struct 
+        let (+) a_1 a_2 = Plus(a_1, a_2)
+        let (-) a_1 a_2 = Minus(a_1, a_2)
+        let ( * ) a_1 a_2 = Times(a_1, a_2)
+
+        let (<) a_1 a_2 = Lt(a_1, a_2)
+        let (=) a_1 a_2 = Eq(a_1, a_2)
+
+        let (&&) b_1 b_2 = And(b_1, b_2)
+        let (||) b_1 b_2 = Or(b_1, b_2)
+        let not b = Not b
+
+        let (:=) ?(l = fetch ()) x a = Assign(x, a, l)
+        let (^) s_1 s_2 = Seq(s_1, s_2)
+        let ifte ?(l = fetch ()) b s_1 s_2 = Ifte(b, s_1, s_2, l)
+        let whiledo ?(l = fetch ()) b s = While(b, s, l)
+        let skip () = Skip
+end

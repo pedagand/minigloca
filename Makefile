@@ -1,4 +1,4 @@
 all:
-	dune build src/Minigloca.exe
+	dune build src/main.exe
 clean:
 	dune clean
