@@ -1,5 +1,6 @@
 a := 5;
 b := 8;
+
 while a = 5 do 
 	c := 1;
 	f := 2
@@ -9,3 +10,4 @@ if b < 10 then
 	a := 1
 else
 	a := 0
+endif

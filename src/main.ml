@@ -3,8 +3,8 @@ open Lexing
 open Parser
 
 let printLexException lexbuf =
-                let pos = lexbuf.lex_curr_p in 
-                Printf.printf "%s:%d:%d\n" pos.pos_fname pos.pos_lnum (pos.pos_cnum - pos.pos_bol + 1)
+        let pos = lexbuf.lex_curr_p in 
+        Printf.printf "%s:%d:%d\n" pos.pos_fname pos.pos_lnum (pos.pos_cnum - pos.pos_bol + 1)
 
 let lex filename =
         let input = open_in filename in
@@ -19,7 +19,7 @@ let lex filename =
         close_in input
 
 let main () = 
-        lex "test/test_1.gloca";
+        lex "test/test_2.gloca";
         exit 0
 
 let _ = if not !Sys.interactive then main () else ()

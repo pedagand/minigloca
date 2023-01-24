@@ -30,6 +30,7 @@ rule token = parse
         | "if"white*    { IF }
         | "then"white*  { THEN }
         | "else"white*  { ELSE }
+        | "endif"white* { ENDIF }
         | "while"white* { WHILE }
         | "do"white*    { DO }
         | "done"white*  { DONE }

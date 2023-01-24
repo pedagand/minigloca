@@ -18,6 +18,7 @@
 %token IF
 %token THEN
 %token ELSE
+%token ENDIF
 %token WHILE
 %token DO
 %token DONE
@@ -45,7 +46,7 @@ bexp:
 statement:
         | v = VAR ; ASSIGN ; e = aexp { Syntax.(v := e) }
         | s_1 = statement ; SEMI_COL ; s_2 = statement { Syntax.(s_1 ^ s_2) }
-        | IF ; c = bexp ; THEN ; s_1 = statement ; ELSE ; s_2 = statement { Syntax.(ifte c s_1 s_2) }
+        | IF ; c = bexp ; THEN ; s_1 = statement ; ELSE ; s_2 = statement ; ENDIF { Syntax.(ifte c s_1 s_2) }
         | WHILE ; c = bexp ; DO ; s = statement ; DONE { Syntax.(whiledo c s) } 
 
 prog:
