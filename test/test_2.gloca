@@ -1,12 +1,10 @@
 a := 1;
 b := 20;
-
-if a = 3 then
+if a < 3 then
 	c := 4
 else
 	c := 6
-endif
-;
+endif;
 while b < 100 do
 	b := b + 1
 done
