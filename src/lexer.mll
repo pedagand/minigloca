@@ -25,14 +25,14 @@ rule token = parse
         | '!'           { NOT }
         | ":="          { ASSIGN }
         | ';'           { SEMI_COL }
-        | "if"white*    { IF }
-        | "then"white*  { THEN }
-        | "else"white*  { ELSE }
-        | "endif"white* { ENDIF }
-        | "while"white* { WHILE }
-        | "do"white*    { DO }
-        | "done"white*  { DONE }
+        | "if"          { IF }
+        | "then"        { THEN }
+        | "else"        { ELSE }
+        | "endif"       { ENDIF }
+        | "while"       { WHILE }
+        | "do"          { DO }
+        | "done"        { DONE }
         | id            { VAR(Lexing.lexeme lexbuf) }
         | int           { INT(int_of_string(Lexing.lexeme lexbuf)) } 
-        | _             { raise (SyntaxError ("Caractère inconnu : " ^ Lexing.lexeme lexbuf)) }
         | eof           { EOF }
+        | _             { raise (SyntaxError ("Caractère inconnu : " ^ Lexing.lexeme lexbuf)) } 
