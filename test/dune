@@ -1,2 +1,3 @@
 (test
- (name minigloca))
+ (name test)
+ (libraries alcotest MiniglocaLib))

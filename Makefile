@@ -1,4 +1,4 @@
 all:
-	dune build src/main.exe
+	dune build src/minigloca.exe
 clean:
 	dune clean

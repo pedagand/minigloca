@@ -5,8 +5,13 @@
 
 (ocamllex lexer)
 
-(executable 
- (name main) 
- (preprocess (pps ppx_deriving.show ppx_deriving.ord ppx_deriving.eq))
- (libraries ppx_deriving alcotest pprint)
- (modules main lexer ast parser))
+(executable
+ (name minigloca) 
+ (modules Minigloca)  
+ (libraries MiniglocaLib))
+
+(library
+ (name MiniglocaLib)
+ (preprocess (pps ppx_deriving.show ppx_deriving.ord ppx_deriving.eq)) 
+ (libraries ppx_deriving pprint)
+ (modules Ast Interpreter Label Parser Lexer))
