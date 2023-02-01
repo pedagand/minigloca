@@ -13,8 +13,8 @@ let white = ' ' | '\t' | '\r' | '\n' | "\r\n"
 
 rule token = parse
         | white+        { token lexbuf } 
-        | "true"        { TRUE }
-        | "false"       { FALSE }
+        | "True"        { TRUE }
+        | "False"       { FALSE }
         | '+'           { PLUS }
         | '-'           { MINUS }
         | '*'           { TIMES }

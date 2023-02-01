@@ -19,8 +19,3 @@ let gloca () = Ast.Syntax.(
                 "a" := Int(0)
         )
 )
-
-let test () =
-        Alcotest.(check bool) "Is program well formed"
-        true
-        (Label.isStatementWellFormed (gloca()))

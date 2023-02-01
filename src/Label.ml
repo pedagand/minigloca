@@ -14,9 +14,8 @@ module Label =
 
 module Edge =
         struct
-                type t = int * int
-                let compare (e_aa, e_ab) (e_ba, e_bb) =
-                        (Stdlib.compare e_aa e_ba) + (Stdlib.compare e_ab e_bb)
+                type t = int * int [@@deriving ord]
+                let compare e_a e_b = compare e_a e_b
         end
 
 module LabelMap = Map.Make(Label)
@@ -87,10 +86,10 @@ let cartesian li_a li_b = List.concat (List.map (fun e -> List.map (fun e' -> (e
 let rec flow stm edges = match stm with
         | Assign(_, _, _)
         | Skip(_) -> LabelPairSet.S.empty
-        | Seq(s_1, s_2) ->
+        | Seq(s_1, s_2) -> 
                         let fl_1 = flow s_1 edges in
                         let fl_2 = flow s_2 fl_1 in
-                        LabelPairSet.S.union fl_2 (LabelPairSet.ofList (cartesian [init s_2] (final s_1)))
+                        LabelPairSet.S.union fl_2 (LabelPairSet.ofList (cartesian [init s_2] (final s_1))) 
         | Ifte(b, s_1, s_2, l) ->
                         let fl_1 = flow s_1 edges in
                         let fl_2 = flow s_2 edges in

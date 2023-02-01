@@ -276,7 +276,6 @@ La logique de Hoare est un modèle formel qui nous permet la correction rigoureu
 prédicats et $C$ une déclaration. Alors le triplet de Hoare est défini comme tel,
 
 $$\{P\}C\{Q\}$$
-
 Il est ensuite possible de développer un ensemble de règles logiques. Pour des raisons de commodités, on adaptera légèrement 
 la syntaxe de la déclaration des règles, en prenant en compte nos état et déclaration, cela prendra donc la forme suivante,
 
@@ -361,7 +360,6 @@ On peut maintenant définir la fonction $\iota$, qui retournera la première ét
 	(\text{if }b\text{ then }s_1\text{ else }s_2)^l &\longmapsto l\\
 	(\text{while }b\text{ do }s)^l &\longmapsto l
 \end{align*}
-
 Comme expliqué précédemment, il est aussi nécessaire de déclarer une fonction $\phi$ qui retournera l'ensemble des étiquettes finales 
 à la fin d'un bloc $\pi$.
 
@@ -384,7 +382,6 @@ On peut désormais les définir de la sorte,
 	&\mid Exp_b\\
 	&\mid \text{Skip}
 \end{align*}
-
 Maintenant les blocs correctement définis, il nous faut pouvoir les lier à une étiquette. Pour ce faire, on se donne $\beta$ définie par,
 
 \begin{align*}
@@ -405,7 +402,7 @@ graphe est de considérer l'ensemble des couples des étiquettes de blocs qui in
 Pour ce faire, considérons l'application suivante, 
 
 \begin{align*}
-	\varrho : Stm &\longrightarrow \mathbb{N}^2 \\
+	\varrho : Stm &\longrightarrow \mathcal{P}(\mathbb{N}^2) \\
 	Id:=Exp_a &\longmapsto \emptyset \\
 	\textit{Skip} &\longmapsto \emptyset \\
 	s_1 ; s_2 &\longmapsto \varrho(s_1) \cup \varrho(s_2) \cup [\phi(s_1)\times\{\iota(s_2)\}] \\
