@@ -24,7 +24,7 @@ let lex () =
     Printf.printf "Labels\n";
     List.iter (fun x -> Printf.printf "%d\n" x) (Label.labels tok);
     Printf.printf "iswf? %b\n" (Label.isStatementWellFormed tok);
-    let blocks = Label.blocksOf tok Label.LabelMap.empty in
+    let blocks = Label.blocks_of tok Label.LabelMap.empty in
     Label.LabelMap.iter
       (fun k v -> Printf.printf "%d %s\n" k (Label.show_block v))
       blocks;

@@ -17,22 +17,22 @@ end
 
 module LabelMap = Map.Make (Label)
 
-let rec blocksOf stm blocks =
+let rec blocks_of stm blocks =
   match stm with
   | Assign t ->
       let s, a = t.cnt in
       LabelMap.add t.label (BlAssign (s, a)) blocks
   | Seq (s_1, s_2) ->
-      let bl_1 = blocksOf s_1 blocks in
-      blocksOf s_2 bl_1
+      let bl_1 = blocks_of s_1 blocks in
+      blocks_of s_2 bl_1
   | Skip t -> LabelMap.add t.label BlSkip blocks
   | Ifte (t, s_1, s_2) ->
       let bl_b = LabelMap.add t.label (BlExpBool t.cnt) blocks in
-      let bl_1 = blocksOf s_1 bl_b in
-      blocksOf s_2 bl_1
+      let bl_1 = blocks_of s_1 bl_b in
+      blocks_of s_2 bl_1
   | While (t, s) ->
       let bl_b = LabelMap.add t.label (BlExpBool t.cnt) blocks in
-      blocksOf s bl_b
+      blocks_of s bl_b
 
 let labels stm =
   let rec acc lb_list = function
