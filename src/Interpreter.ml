@@ -22,18 +22,20 @@ let rec eval_bexp state exp =
 
 let rec eval_stm stm state =
         match stm with
-        | Assign(s, a, _) -> State.add s (eval_aexp state a) state
+        | Assign t -> 
+                let (s, a) = t.cnt in
+                State.add s (eval_aexp state a) state
         | Seq(s_1, s_2) -> eval_stm s_2 (eval_stm s_1 state)
-        | Ifte(b, s_1, s_2, _) ->
-                        let bexp = (eval_bexp state b) in
+        | Ifte(t, s_1, s_2) ->
+                        let bexp = (eval_bexp state t.cnt) in
                         if bexp then
                                eval_stm s_1 state
                         else
                                eval_stm s_2 state
-        | While(b, s, _) as w ->
-                        let bexp = (eval_bexp state b) in
+        | While(t, s) as w ->
+                        let bexp = (eval_bexp state t.cnt) in
                         if bexp then
                                 eval_stm w (eval_stm s state)
                         else
                                 state 
-        | Skip(_) -> state
+        | Skip _ -> state

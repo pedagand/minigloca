@@ -11,6 +11,7 @@ let () =
                         test_case "Test syntax And" `Quick Syntax.test_syntax_and;
                         test_case "Test syntax Or" `Quick Syntax.test_syntax_or;
                         test_case "Test syntax Not" `Quick Syntax.test_syntax_not;  
+                        test_case "Test syntax Assign" `Quick Syntax.test_syntax_assign;
                 ];
                 "semantic-tests", [
                         test_case "Test Interpreter" `Quick Semantic.test_eval_stm; 

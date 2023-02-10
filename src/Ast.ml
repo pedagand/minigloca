@@ -20,36 +20,40 @@ type b = True | False
 (* Statements *)
 
 type label = int [@@deriving show, eq, ord]
-type 'a labelled = 'a * label
+type 'a labelled = {
+        cnt : 'a;
+        label : label [@equal fun _ _ -> true]  
+}
+[@@deriving show, eq]
 
-type s = Assign of string * a * label
+type s = Assign of (string * a) labelled
     | Seq of s * s
-    | Ifte of b * s * s * label
-    | While of b * s * label 
-    | Skip of label 
+    | Ifte of b labelled * s * s
+    | While of b labelled * s
+    | Skip of unit labelled
     [@@deriving show, eq]
 
 let fl = ref 0
 let fetch () =  
-        fl := !fl + 1;
-        !fl
+    fl := !fl + 1;
+    !fl
 
 module Syntax = 
-        struct 
-                let (+) a_1 a_2 = Plus(a_1, a_2)
-                let (-) a_1 a_2 = Minus(a_1, a_2)
-                let ( * ) a_1 a_2 = Times(a_1, a_2)
+    struct 
+        let (+) a_1 a_2 = Plus(a_1, a_2)
+        let (-) a_1 a_2 = Minus(a_1, a_2)
+        let ( * ) a_1 a_2 = Times(a_1, a_2)
 
-                let (<) a_1 a_2 = Lt(a_1, a_2)
-                let (=) a_1 a_2 = Eq(a_1, a_2)
+        let (<) a_1 a_2 = Lt(a_1, a_2)
+        let (=) a_1 a_2 = Eq(a_1, a_2)
 
-                let (&&) b_1 b_2 = And(b_1, b_2)
-                let (||) b_1 b_2 = Or(b_1, b_2)
-                let not b = Not b
+        let (&&) b_1 b_2 = And(b_1, b_2)
+        let (||) b_1 b_2 = Or(b_1, b_2)
+        let not b = Not b
 
-                let (:=) ?(l = fetch ()) x a = Assign(x, a, l)
-                let (^) s_1 s_2 = Seq(s_1, s_2)
-                let ifte ?(l = fetch ()) b s_1 s_2 = Ifte(b, s_1, s_2, l)
-                let whiledo ?(l = fetch ()) b s = While(b, s, l)
-                let skip ?(l = fetch()) () = Skip(l)
-        end
+        let (:=) ?(l = fetch ()) x a = Assign{cnt = (x, a); label = l}
+        let (^) s_1 s_2 = Seq(s_1, s_2)
+        let ifte ?(l = fetch ()) b s_1 s_2 = Ifte({cnt = b; label = l}, s_1, s_2)
+        let whiledo ?(l = fetch ()) b s = While({cnt = b; label = l}, s)
+        let skip ?(l = fetch()) () = Skip{cnt = (); label = l}
+    end

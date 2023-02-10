@@ -43,4 +43,9 @@ let test_syntax_not () =
         true
         (Ast.equal_b (Not(True)) Ast.Syntax.(not True))
 
-
+let test_syntax_assign () =
+        Ast.fl := !Ast.fl - !Ast.fl;
+        Alcotest.(check bool) "Assign operator"
+        true
+        (Ast.equal_s (Ast.Assign{cnt = ("x", Ast.Int(1)); label = 5}) Ast.Syntax.("x" := Ast.Int(1)))
+        
