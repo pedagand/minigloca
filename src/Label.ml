@@ -72,10 +72,10 @@ let rec final stm =
   | Seq (_, s_2) -> final s_2
   | Ifte (_, s_1, s_2) -> LabelSet.union (final s_1) (final s_2)
 
-module EdgeSet = Set.Make(Edge)
+module EdgeSet = Set.Make (Edge)
 
 let cartesian li_a li_b =
-  List.concat (List.map (fun e -> List.map (fun e' -> (e, e')) li_a) li_b)
+  List.concat (List.map (fun e -> List.map (fun e' -> (e, e')) li_b) li_a)
 
 let rec flow stm edges =
   match stm with
@@ -84,7 +84,8 @@ let rec flow stm edges =
       let fl_1 = flow s_1 edges in
       let fl_2 = flow s_2 fl_1 in
       EdgeSet.union fl_2
-        (EdgeSet.of_list (cartesian [ init s_2 ] (LabelSet.elements (final s_1))))
+        (EdgeSet.of_list
+           (cartesian (LabelSet.elements (final s_1)) [ init s_2 ]))
   | Ifte (t, s_1, s_2) ->
       let fl_1 = flow s_1 edges in
       let fl_2 = flow s_2 edges in
@@ -94,4 +95,4 @@ let rec flow stm edges =
       let fl_s = flow s edges in
       let ls_s = EdgeSet.add (t.label, init s) fl_s in
       EdgeSet.union ls_s
-        (EdgeSet.of_list (cartesian [ t.label ] (LabelSet.elements (final s))))
+        (EdgeSet.of_list (cartesian (LabelSet.elements (final s)) [ t.label ]))
