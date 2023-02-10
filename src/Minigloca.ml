@@ -20,7 +20,7 @@ let lex () =
     let finalState = Interpreter.eval_stm tok Interpreter.State.empty in
     Interpreter.State.iter (fun k v -> Printf.printf "%s - %d\n" k v) finalState;
     let finalStms = Label.final tok in
-    List.iter (fun x -> Printf.printf "%d\n" x) finalStms;
+    Label.LabelSet.iter (fun x -> Printf.printf "%d\n" x) finalStms;
     Printf.printf "Labels\n";
     List.iter (fun x -> Printf.printf "%d\n" x) (Label.labels tok);
     Printf.printf "iswf? %b\n" (Label.isStatementWellFormed tok);
@@ -28,8 +28,8 @@ let lex () =
     Label.LabelMap.iter
       (fun k v -> Printf.printf "%d %s\n" k (Label.show_block v))
       blocks;
-    let flows = Label.flow tok Label.LabelPairSet.S.empty in
-    Label.LabelPairSet.S.iter (fun (a, b) -> Printf.printf "(%d, %d)" a b) flows
+    let flows = Label.flow tok Label.EdgeSet.empty in
+    Label.EdgeSet.iter (fun (a, b) -> Printf.printf "(%d, %d)" a b) flows
   with
   | Lexer.SyntaxError m ->
       Printf.printf "%s\n" m;

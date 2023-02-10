@@ -16,6 +16,7 @@ module Edge = struct
 end
 
 module LabelMap = Map.Make (Label)
+module LabelSet = Set.Make (Label)
 
 let rec blocks_of stm blocks =
   match stm with
@@ -65,38 +66,32 @@ let rec init stm =
 
 let rec final stm =
   match stm with
-  | Assign t -> [ t.label ]
-  | Skip t -> [ t.label ]
-  | While (t, _) -> [ t.label ]
+  | Assign t -> LabelSet.singleton t.label
+  | Skip t -> LabelSet.singleton t.label
+  | While (t, _) -> LabelSet.singleton t.label
   | Seq (_, s_2) -> final s_2
-  | Ifte (_, s_1, s_2) -> final s_1 @ final s_2
+  | Ifte (_, s_1, s_2) -> LabelSet.union (final s_1) (final s_2)
 
-module LSet (T : Set.OrderedType) = struct
-  module S = Set.Make (T)
-
-  let ofList l = List.fold_left (fun set e -> S.add e set) S.empty l
-end
-
-module LabelPairSet = LSet (Edge)
+module EdgeSet = Set.Make(Edge)
 
 let cartesian li_a li_b =
   List.concat (List.map (fun e -> List.map (fun e' -> (e, e')) li_a) li_b)
 
 let rec flow stm edges =
   match stm with
-  | Assign _ | Skip _ -> LabelPairSet.S.empty
+  | Assign _ | Skip _ -> EdgeSet.empty
   | Seq (s_1, s_2) ->
       let fl_1 = flow s_1 edges in
       let fl_2 = flow s_2 fl_1 in
-      LabelPairSet.S.union fl_2
-        (LabelPairSet.ofList (cartesian [ init s_2 ] (final s_1)))
+      EdgeSet.union fl_2
+        (EdgeSet.of_list (cartesian [ init s_2 ] (LabelSet.elements (final s_1))))
   | Ifte (t, s_1, s_2) ->
       let fl_1 = flow s_1 edges in
       let fl_2 = flow s_2 edges in
-      let ls_1 = LabelPairSet.S.add (t.label, init s_1) edges in
-      LabelPairSet.S.add (t.label, init s_2) ls_1
+      let ls_1 = EdgeSet.add (t.label, init s_1) edges in
+      EdgeSet.add (t.label, init s_2) ls_1
   | While (t, s) ->
       let fl_s = flow s edges in
-      let ls_s = LabelPairSet.S.add (t.label, init s) fl_s in
-      LabelPairSet.S.union ls_s
-        (LabelPairSet.ofList (cartesian [ t.label ] (final s)))
+      let ls_s = EdgeSet.add (t.label, init s) fl_s in
+      EdgeSet.union ls_s
+        (EdgeSet.of_list (cartesian [ t.label ] (LabelSet.elements (final s))))
