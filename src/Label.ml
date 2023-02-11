@@ -77,22 +77,22 @@ module EdgeSet = Set.Make (Edge)
 let cartesian li_a li_b =
   List.concat (List.map (fun e -> List.map (fun e' -> (e, e')) li_b) li_a)
 
-let rec flow_of stm edges =
+let rec flow_of stm =
   match stm with
   | Assign _ | Skip _ -> EdgeSet.empty
   | Seq (s_1, s_2) ->
-      let fl_1 = flow_of s_1 edges in
-      let fl_2 = EdgeSet.union fl_1 (flow_of s_2 edges) in
+      let fl_1 = flow_of s_1 in
+      let fl_2 = EdgeSet.union fl_1 (flow_of s_2) in
       EdgeSet.union fl_2
         (EdgeSet.of_list
            (cartesian (LabelSet.elements (final s_1)) [ init s_2 ]))
   | Ifte (t, s_1, s_2) ->
-      let fl_1 = flow_of s_1 edges in
-      let fl_2 = EdgeSet.union fl_1 (flow_of s_2 edges) in
+      let fl_1 = flow_of s_1 in
+      let fl_2 = EdgeSet.union fl_1 (flow_of s_2) in
       let ls_1 = EdgeSet.add (t.label, init s_1) fl_2 in
       EdgeSet.add (t.label, init s_2) ls_1
   | While (t, s) ->
-      let fl_s = flow_of s edges in
+      let fl_s = flow_of s in
       let ls_s = EdgeSet.add (t.label, init s) fl_s in
       EdgeSet.union ls_s
         (EdgeSet.of_list (cartesian (LabelSet.elements (final s)) [ t.label ]))

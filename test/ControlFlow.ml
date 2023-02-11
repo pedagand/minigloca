@@ -2,7 +2,7 @@ open MiniglocaLib
 
 let test_gloca_cfg tag ast check =
   let cfg = Label.EdgeSet.of_list check in
-  let test_p_cfg = Label.flow_of ast Label.EdgeSet.empty in
+  let test_p_cfg = Label.flow_of ast in
 
   Label.EdgeSet.iter (fun (x, y) -> Printf.printf "%d, %d\n" x y) test_p_cfg;
   Alcotest.(check bool) tag true (Label.EdgeSet.equal cfg test_p_cfg)

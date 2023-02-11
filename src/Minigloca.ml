@@ -28,8 +28,10 @@ let lex () =
     Label.LabelMap.iter
       (fun k v -> Printf.printf "%d %s\n" k (Label.show_block v))
       blocks;
-    let flows = Label.flow_of tok Label.EdgeSet.empty in
-    Label.EdgeSet.iter (fun (a, b) -> Printf.printf "(%d, %d)" a b) flows
+    let flows = Label.flow_of tok in
+    Label.EdgeSet.iter (fun (a, b) -> Printf.printf "(%d, %d)" a b) flows;
+    let i, o = Analysis.analysis tok in
+    Label.LabelMap.iter (fun k v -> Printf.printf "%d -> {" k; Analysis.Vars.iter (fun s -> Printf.printf "%s, " s) v; Printf.printf "}\n") i
   with
   | Lexer.SyntaxError m ->
       Printf.printf "%s\n" m;

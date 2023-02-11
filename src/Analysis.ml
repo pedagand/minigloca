@@ -26,3 +26,57 @@ let kill block =
   match block with
   | BlAssign (s, _) -> Vars.singleton s
   | BlExpBool _ | BlSkip -> Vars.empty
+
+let succ cfg l =
+  let rec acc edges s =
+    match edges with
+    | [] -> s
+    | (e, e') :: t when e = l -> acc t (e' :: s)
+    | _ :: t -> acc t s
+  in
+  acc (EdgeSet.elements cfg) []
+
+(*
+  For all l in L
+    LIVE_IN[l] := \emptyset
+    LIVE_OUT[l] := \emptyset
+
+  LIVE_IN' = LIVE_IN
+  LIVE_OUT' = LIVE_OUT
+
+  While LIVE_IN' = LIVE_IN && LIVE_OUT' = LIVE_OUT do
+    For all l in L
+      LIVE_IN[l] = GEN[l] + (LIVE_OUT[l] - KILL[l])
+      LIVE_OUT[l] = UNION OF LIVE_IN[l'], l' in succ(l)
+*)
+
+let rec successor_blocks_union succ of_set =
+  match succ with
+  | [] -> Vars.empty
+  | h :: t ->
+      Vars.union (LabelMap.find h of_set) (successor_blocks_union t of_set)
+
+let rec update lblocks cfg lin lout =
+  match lblocks with
+  | [] -> (lin, lout)
+  | (l, b) :: t ->
+      let live_in =
+        Vars.union (gen b) (Vars.diff (LabelMap.find l lout) (kill b))
+      in
+      let live_out = successor_blocks_union (succ cfg l) lin in
+      update t cfg (LabelMap.add l live_in lin) (LabelMap.add l live_out lout)
+
+let rec dataflow lblocks cfg lin lout =
+  let lin', lout' = update lblocks cfg lin lout in
+  if LabelMap.equal Vars.equal lin lin' && LabelMap.equal Vars.equal lout lout'
+  then (lin', lout')
+  else dataflow lblocks cfg lin' lout'
+
+let analysis stm =
+  let labels = labels stm in
+  let blocks = blocks_of stm LabelMap.empty in
+  let flow = flow_of stm in
+  let fold_go m e = LabelMap.add e Vars.empty m in
+  let lin = List.fold_left fold_go LabelMap.empty labels in
+  let lout = List.fold_left fold_go LabelMap.empty labels in
+  dataflow (LabelMap.bindings blocks) flow lin lout
