@@ -16,19 +16,19 @@ let lex () =
   try
     let tokens = Parser.prog Lexer.token lexbuf in
     let tok = List.hd tokens in
-    (*List.iter (fun x -> Printf.printf "%s\n" (show_s x)) tokens;*)
+    List.iter (fun x -> Printf.printf "%s\n" (Ast.show_s x)) tokens;
     let finalState = Interpreter.eval_stm tok Interpreter.State.empty in
     Interpreter.State.iter (fun k v -> Printf.printf "%s - %d\n" k v) finalState;
     let finalStms = Label.final tok in
     Label.LabelSet.iter (fun x -> Printf.printf "%d\n" x) finalStms;
     Printf.printf "Labels\n";
     List.iter (fun x -> Printf.printf "%d\n" x) (Label.labels tok);
-    Printf.printf "iswf? %b\n" (Label.isStatementWellFormed tok);
+    Printf.printf "iswf? %b\n" (Label.is_statement_well_formed tok);
     let blocks = Label.blocks_of tok Label.LabelMap.empty in
     Label.LabelMap.iter
       (fun k v -> Printf.printf "%d %s\n" k (Label.show_block v))
       blocks;
-    let flows = Label.flow tok Label.EdgeSet.empty in
+    let flows = Label.flow_of tok Label.EdgeSet.empty in
     Label.EdgeSet.iter (fun (a, b) -> Printf.printf "(%d, %d)" a b) flows
   with
   | Lexer.SyntaxError m ->

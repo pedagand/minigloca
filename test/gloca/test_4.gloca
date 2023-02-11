@@ -1,0 +1,8 @@
+a := 0;
+b := 0;
+if a < 50 then
+    a := a * 2
+else
+    a := 0
+endif;
+b := b + 1

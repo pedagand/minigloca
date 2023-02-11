@@ -45,7 +45,7 @@ let labels stm =
   in
   acc [] stm
 
-let isStatementWellFormed stm =
+let is_statement_well_formed stm =
   let lbls = labels stm in
   (* On ne considèrera pas la liste triée *)
   let lbls_sorted = List.sort compare_label lbls in
@@ -77,22 +77,22 @@ module EdgeSet = Set.Make (Edge)
 let cartesian li_a li_b =
   List.concat (List.map (fun e -> List.map (fun e' -> (e, e')) li_b) li_a)
 
-let rec flow stm edges =
+let rec flow_of stm edges =
   match stm with
   | Assign _ | Skip _ -> EdgeSet.empty
   | Seq (s_1, s_2) ->
-      let fl_1 = flow s_1 edges in
-      let fl_2 = flow s_2 fl_1 in
+      let fl_1 = flow_of s_1 edges in
+      let fl_2 = EdgeSet.union fl_1 (flow_of s_2 edges) in
       EdgeSet.union fl_2
         (EdgeSet.of_list
            (cartesian (LabelSet.elements (final s_1)) [ init s_2 ]))
   | Ifte (t, s_1, s_2) ->
-      let fl_1 = flow s_1 edges in
-      let fl_2 = flow s_2 edges in
-      let ls_1 = EdgeSet.add (t.label, init s_1) edges in
+      let fl_1 = flow_of s_1 edges in
+      let fl_2 = EdgeSet.union fl_1 (flow_of s_2 edges) in
+      let ls_1 = EdgeSet.add (t.label, init s_1) fl_2 in
       EdgeSet.add (t.label, init s_2) ls_1
   | While (t, s) ->
-      let fl_s = flow s edges in
+      let fl_s = flow_of s edges in
       let ls_s = EdgeSet.add (t.label, init s) fl_s in
       EdgeSet.union ls_s
         (EdgeSet.of_list (cartesian (LabelSet.elements (final s)) [ t.label ]))

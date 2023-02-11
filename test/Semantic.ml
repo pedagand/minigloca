@@ -14,4 +14,4 @@ let test_eval_stm () =
 let test_iswf () =
   Alcotest.(check bool)
     "Is program well formed" true
-    (Label.isStatementWellFormed (Test_1.gloca ()))
+    (Label.is_statement_well_formed (Test_1.gloca ()))

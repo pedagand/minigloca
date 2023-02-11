@@ -1,6 +1,7 @@
 open MiniglocaLib
 
 let gloca () =
+  Ast.fl := 0;
   Ast.Syntax.(
     ("a" := Int 5)
     ^ ("b" := Int 8)
