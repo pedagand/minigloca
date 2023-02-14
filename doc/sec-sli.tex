@@ -8,35 +8,51 @@ Les expressions arithmétiques sont définies sur l'ensemble des entiers relatif
 de l'addition, de la soustraction ainsi que de la multiplication. À ces opérateurs l'on pourra appliquer des 
 entiers ainsi que des identifiants de variables.
 
+% \begin{dtype}{Int}
+%   \inlinekind{n}\with{n\in\mathbb{Z}}
+% \end{dtype}
+% \begin{dtype}{Id}
+%   \inlinekind{x}
+%   \kind{y}
+%   \kind{z}
+%   \kind{\ldots}
+% \end{dtype}
+% \begin{dtype}{Exp_a}
+%   \inlinekind{Int}
+%   \kind{Id}
+%   \kind{op_A (a_1, a_2)}
+%   \with{op_A \in\{+, -, \times\}}
+% \end{dtype}
+
 \begin{align*}
 Int &\rightarrow n &n \in \mathbb{Z}\\
 Id &\rightarrow x \mid y \mid z \mid \cdots \\
 Exp_a &\rightarrow Int \mid Id \mid op_A(a_1, a_2) &op_A \in \{+, -, \times\}
 \end{align*}
-
 L'identifiant d'une variable est, de manière générale, une chaîne de caractères.
 
 \subsection{Expressions booléennes}
 Les expressions booléennes nous permettent d'introduire la comparaison entre deux expressions arithmétiques, 
 ainsi que les opérateurs booléens sur les expressions booléennes.
 
-\begin{align*}
-Exp_b & \rightarrow \textbf{true} \mid \textbf{false} & \\
-  & \mid op_R(a_1, a_2) & op_R \in \{<, =\} \\
-  & \mid op_B(b_1, b_2) & op_B \in \{\wedge, \vee\} \\
-  & \mid \neg b &
-\end{align*}
+\begin{dtype}{Exp_b}
+  \inlinekind{\textbf{true}}
+  \kind{\textbf{false}}\\
+  \akind{op_R (a_1, a_2)}\with{op_R\in\{<, =\}}
+  \akind{op_B (b_1, b_2)}\with{op_B\in\{\wedge, \vee\}}
+  \akind{\neg{b}}
+\end{dtype}
 
 \subsection{Déclarations}
 Les déclarations sont définies de la manière suivante:
 
-\begin{align*}
-Stm & \rightarrow Id := Exp_a \\
-  & \mid s_1 \space;\space s_2 \\
-  & \mid \\
-  & \mid \text{if } b \text{ then } s_1 \text{ else } s_2 \\
-  & \mid \text{while } b \text{ do } s_1
-\end{align*}
+\begin{dtype}{Stm}
+  \inlinekind{\sassign{Id}{Exp_a}}\\
+  \akind{\sseq{s_1}{s_2}}\\
+  \akind{ }\\
+  \akind{\ifthenelse{b}{s_1}{s_2}}\\
+  \akind{\whiledo{b}{s}}
+\end{dtype}
 
 \subsection{Exemple}
 Voici un premier exemple sur ce langage
@@ -61,7 +77,7 @@ cette structure étant un moyen pratique de le représenter. Cela nous servira p
 analyses qui seront effectuées, et notamment l'analyse par flot de contrôle. Cette dernière ne requièrant pas 
 la connaissance de l'ordre d'exécution du programme, les AST sont tout-à-fait adaptés!
 
-\input{ast.fig}
+\begin{center}\input{ast.fig}\end{center}
 
 \subsection{Graphe de flot de contrôle}
 Un graphe de flot de contrôle est un graphe orienté dont les noeuds représentent une déclaration et les arcs un 

@@ -52,3 +52,13 @@
         {#2}
     \end{mathpar}
 }
+
+\newenvironment{dtype}[1]{
+\newcommand{\inlinekind}[1]{##1}
+\newcommand{\kind}[1]{\mid##1}
+\newcommand{\akind}[1]{&\kind{##1}}
+\newcommand{\with}[1]{&##1\\}
+\csname align*\endcsname
+#1 &\rightarrow}{
+\csname endalign*\endcsname
+}
