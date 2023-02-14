@@ -1,0 +1,13 @@
+\section{Interpréteur et sémantique}
+Dans ce chapitre, on s'atèle à décrire l'interpréteur ainsi que la sémantique sur notre petit langage impératif. 
+Dans ce cadre là, on définit l'état du programme par une bijection entre l'identifiant des variables et leur valeur, 
+ici un entier:
+\[\sigma : \mathbb{V} \longrightarrow \mathbb{Z}\]
+On introduire aussi la bijection $\mu_B$,
+\[\mu_B : \mathcal{B} \longrightarrow \mathbb{B}\]
+où $\mathcal{B} = \{\textbf{true}$, \textbf{false}\} les valeurs booléennes de notre langage et $\mathbb{B} = \{\top, \bot\}$ 
+l'ensemble des valeurs booléennes natives à OCaml. Pour la suite, on considèrera l'ensemble des états $\mathcal{S} = \mathbb{Z}^\mathbb{V}$.
+Les états décriront l'évolution de l'exécution du programme.
+
+\input{subsec-interpreteur.tex}
+\input{subsec-semantique.tex}

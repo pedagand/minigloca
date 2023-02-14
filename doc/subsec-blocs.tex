@@ -1,0 +1,22 @@
+\subsection{Blocs}
+De manière à faciliter l'analyse d'un programme, il est utile de partitionner et de factoriser notre représentation du code. 
+Les blocs ont été évoqués dans la partie précédente comme des sous-parties de l'ensemble des déclarations atomiques d'un programme. 
+On peut désormais les définir de la sorte,
+
+\begin{align*}
+	Block &\rightarrow \sassign{Id}{Exp_a}\\
+	&\mid Exp_b\\
+	&\mid \sskip
+\end{align*}
+Maintenant les blocs correctement définis, il nous faut pouvoir les lier à une étiquette. Pour ce faire, on se donne $\beta$ définie par,
+
+\begin{align*}
+	\beta : Stm &\longrightarrow \mathcal{P}(\mathbb{N} \times Block)\\
+	(\sassign{Id}{Exp_a})^l &\longmapsto \{(l, Id := Exp_a)\}\\
+	\sseq{s_1}{s_2} &\longmapsto \beta(s_1) \cup \beta(s_2)\\
+	\sskip^l &\longmapsto \{(l, \textit{Skip})\}\\
+	\ifthenelse{b^l}{s_1}{s_2} &\longmapsto \{(l, b)\}\cup \beta(s_1)\cup\beta(s_2)\\
+	\whiledo{b^l}{s} &\longmapsto \{(l, b)\}\cup\beta(s)
+\end{align*}
+À partir de là, il est possible de formaliser les graphes orientés de flot. Les blocs en représentent les noeuds, et le passage 
+vers le bloc suivant est représenté par un arc.

@@ -1,0 +1,31 @@
+\subsection{Point fixe}
+Revenons-en à l'existence d'un point fixe, pour pouvoir construire un algorithme itératif. En effet,
+on a que $(\mathcal{P}(V), \subseteq)$ l'ensemble de nos variables est un ordre partiel et est fini.
+Ainsi, grâce à la monotonie de nos deux ensembles $LIVE_{in}$ et $LIVE_{out}$ démontrée ci-dessus, il
+vient qu'à chaque itération de notre algorithme, l'ensemble produit sera soit identique à l'ensemble précédent,
+soit plus gros et la finitude de l'ensemble des variables assure qu'il ne pourra par grossir indéfiniment. On se sert pour se faire
+du théorème du point fixe de Kleene qui s'énnonce comme suit,
+\newline
+\newline
+\theorem{
+Soit $(L, \sqsubseteq)$ un ordre partiellement ordonné, avec un plus petit élément  $\perp$ et soit
+une application $f : L \longrightarrow L$ monotone. Alors il existe un point fixe minimal qui est le suprémum de la suite,
+\[\perp \sqsubseteq f(\perp) \sqsubseteq f^2(\perp) \sqsubseteq \cdots \sqsubseteq f^k(\perp) \sqsubseteq \cdots\]
+}
+Commençons par décrire un algorithme de point fixe naïf qu'est le suivant,
+\begin{align*}
+	&\text{Soit } \mathcal{B} := \beta(Block) \textit{  (ordonné du bloc final au bloc initial)}\\
+	&\textbf{Pour } (l, B) \in \mathcal{B}\text{, } live[l] := \emptyset\\
+	&\textbf{Tant que }live[\cdot]\text{ s'altère,}\\
+	&\textbf{Pour } (i, B) \in \mathcal{B}\text{, }\\
+	&live[i] := gen[i] \cup (\bigcup\limits_{p\in succ(i)} live[p] - kill[i])
+\end{align*}
+Si $n = \#\mathcal{B}$, alors cet algorithme a une complexité en $O(kn)$, où $k$ est la hauteur du diagramme
+de Hasse sur $(\mathcal{P}(V), \subseteq)$. Cela se montre grâce à la monotonie de $LIVE_{in}$, en effet, 
+celle-ci ne reste jamais sur un même niveau du diagramme et ne fait que progresser vers $\top$.
+Concernant l'implémentation, il peut être intéressant de définir $live$ comme une structure binaire de taille au
+moins $m$ bits avec $m = \#V$.
+Une amélioration peut être simplement faite sur l'algorithme décrit ci-dessus. Effectivement, on peut remarquer que,
+à chaque modification de $LIVE_{out}[l]$ seul les blocs successeurs seront susceptibles de s'altérer. Donc
+au lieu d'itérer à nouveau sur l'ensemble des blocs, itérer uniquement sur les blocs successeurs au dernier
+bloc altéré. Cette approche a pour nom naturel de \textit{worklist}.

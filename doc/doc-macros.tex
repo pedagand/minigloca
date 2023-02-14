@@ -1,0 +1,34 @@
+\newcommand{\deftype}[2]{
+    ${#1}\rightarrow$\foreach[count=\i] \e in {#2} {
+        \ifnum\i>1$\mid$\fi
+        \space${\e}$\\
+    }
+}
+
+\newcommand{\definition}[1] {
+    \textbf{\textit{Définition --\space}}{#1}
+}
+
+\newcommand{\theorem}[1] {
+    \textbf{\textit{Théorème --\space}}{#1}
+}
+
+\newcommand{\sassign}[2] {
+    {#1}\space:=\space{#2}
+}
+
+\newcommand{\sseq}[2] {
+    {#1}\space;\space{#2}
+}
+
+\newcommand{\sskip}{
+    \textit{Skip}
+}
+
+\newcommand{\ifthenelse}[3] {
+    \text{if }{#1}\text{ then }{#2}\text{ else }{#3}
+}
+
+\newcommand{\whiledo}[2] {
+    \text{while }{#1}\text{ do }{#2}
+}

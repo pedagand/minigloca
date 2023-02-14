@@ -1,0 +1,46 @@
+\documentclass[a4paper, 12pt]{article}
+
+\usepackage[francais]{babel}
+\usepackage[T1]{fontenc}
+\usepackage{amssymb}
+\usepackage{amsmath}
+\usepackage{mathpartir}
+\usepackage{tikz}
+\usepackage{listings}
+\usepackage{color}
+\usepackage{mathtools} % for 'dcases*' env.
+
+\definecolor{dkgreen}{rgb}{0,0.6,0}
+\definecolor{gray}{rgb}{0.5,0.5,0.5}
+\definecolor{mauve}{rgb}{0.58,0,0.82}
+
+\lstset{frame=tb,
+	language=caml,
+	columns=[c]fixed,
+	basicstyle=\small\ttfamily,
+	keywordstyle=\bfseries,
+	upquote=true,
+	commentstyle=,
+	breaklines=true,
+	showstringspaces=false,
+	stringstyle=\color{green}
+}
+
+\title{Minigloca}
+\author{Vladislas de Haldat}
+
+\begin{document}
+
+\include{doc-macros.tex}
+
+\maketitle
+\newpage
+\tableofcontents
+\newpage
+
+\input{sec-sli.tex}
+\input{sec-interpreteur-et-semantique.tex}
+\input{sec-prerequis-analyse.tex}
+\input{sec-analyse-vivacite.tex}
+
+\end{document}

@@ -1,0 +1,17 @@
+\subsection{Monotonie}
+La monotonie des ensembles de flot de données nous permet de déterminer l'existence d'un point fixe sur notre
+fonction. Cela sera donc utile pour fournir un algorithme qui termine, lors de la construction de ces ensembles, 
+étant donné que l'ensemble des variables d'un programme est supposé fini.
+\\
+\\
+On se consacre, dans cette partie, à montrer la monotonie de notre ensemble $LIVE_{in}[l]$ pour toute étiquette de blocs. Posons la fonction,
+\begin{align*}
+	f_l : \mathcal{P}(V) &\longrightarrow \mathcal{P}(V) \\
+	\mathcal{O} &\longmapsto GEN[l] \cup (\mathcal{O} - KILL[l])
+\end{align*}
+Soient $k, k' \in \mathcal{P}(V)$ tels que $k \subseteq k'$, alors on a,
+\begin{align*}
+	k - KILL[l] &\subseteq k' - KILL[l] \text{ et,}\\
+	GEN[l] \cup (k - KILL[l]) &\subseteq GEN[l] \cup (k' - KILL[l]).
+\end{align*}
+Donc $f_l(k) \subseteq f_l(k')$ donc $f_l$ est monotone. On a ainsi que $LIVE_{in}[l]$, dépendant de $LIVE_{out}[l]$, est monotone.

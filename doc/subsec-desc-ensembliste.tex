@@ -1,0 +1,51 @@
+\subsection{Description ensembliste du programme}
+Soit $V$ l'ensemble des variables déclarées dans un programme. On se donne alors $S = (\mathcal{P}(V), \subseteq)$
+l'ensemble partiellement ordonné des parties de $V$.
+\\
+Pour $l \in \mathbb{N}$ l'étiquette d'un bloc, on définit désormais les ensembles qui suivent,
+\[GEN[l] \subseteq \mathcal{P}(V)\]
+l'ensemble des variables appelées dans le bloc en question et,
+\[KILL[l] \subseteq \mathcal{P}(V)\]
+l'ensemble des variables nouvellement assignées donc considérées pour lors comme mortes. Enfin on se donnera,
+\[vars : Exp_a \cup Exp_b \longrightarrow \mathcal{P}(V)\]
+l'ensemble des identifiants présents dans une expression arithmétique ou booléenne.
+\\
+On peut désormais introduire les fonctions,
+\begin{align*}
+	gen : Block &\longrightarrow \mathcal{P}(V)\\
+	\sassign{Id}{Exp_a} &\longmapsto vars(Exp_a)\\
+	\sskip &\longmapsto \emptyset\\
+	Exp_b &\longmapsto vars(Exp_b)
+\end{align*}
+génère l'ensemble $GEN[l]$ et,
+\begin{align*}
+	kill : Block &\longrightarrow \mathcal{P}(V)\\
+	\sassign{Id}{Exp_a} &\longmapsto \{Id\}\\
+	\sskip &\longmapsto \emptyset\\
+	Exp_b &\longmapsto \emptyset
+\end{align*}
+génère l'ensemble $KILL[l]$.
+\\
+\\
+Notre langage étant un langage impératif, il est par conséquent naturel d'effectuer cette analyse de bas en haut dans le programme,
+de manière à déterminer cette vivacité. Ainsi l'on déclare deux ensembles de variables vivantes à l'entrée, et à la
+sortie d'un bloc. On les définit comme tels,
+
+\[
+	LIVE_{out}[l] = 
+	\begin{dcases*}
+		\emptyset &si $succ(l) = \emptyset $\,, \\
+		\bigcup\limits_{p\in succ(s)} LIVE_{in}[p] &sinon\,,
+	\end{dcases*}
+\]
+l'ensemble des variables vivantes à la sortie d'un bloc et,
+
+\[
+	LIVE_{in}[l] = GEN[l] \cup (LIVE_{out}[l] - KILL[l]),
+\]
+l'ensemble des variables vivantes à l'entrée d'un bloc.
+\\
+\\
+En tant que tel, nous ne pouvons toujours pas effectuer l'analyse de vivacité sur nos programmes, il nous manque en
+effet un algorithme de point fixe pour y parvenir. Dans les parties suivantes, nous introduirons pour ce faire, 
+l'algorithme du point fixe de Kleene.
