@@ -1,62 +1,40 @@
 \subsection{Sémantique}
-Maintenant que nous avons correctement défini l'interpréteur, il est possible de construire la sémantique du langage.
-La logique de Hoare est un modèle formel qui nous permet la correction rigoureuse de nos programmes. Soient $P, Q$ des 
-prédicats et $C$ une déclaration. Alors le triplet de Hoare est défini comme tel,
-
-\[\{P\}C\{Q\}\]
-Il est ensuite possible de développer un ensemble de règles logiques. Pour des raisons de commodités, on adaptera légèrement 
-la syntaxe de la déclaration des règles, en prenant en compte nos état et déclaration, cela prendra donc la forme suivante,
+Maintenant que nous avons correctement défini l'interpréteur, il est possible 
+de construire la sémantique du langage. Il est ensuite possible de développer 
+un ensemble de règles logiques. La syntaxe de la déclaration des règles,
+prenant en compte nos état et déclaration, sera donc de la forme suivante,
 
 \[Stm, \mathcal{S} \longrightarrow Stm', \mathcal{S}'\]
 \\
-où $Stm$ est la première déclaration, $Stm'$ celle qui suit après son exécution, $\mathcal{S}$ l'état initial et $\mathcal{S}'$ 
-l'état successeur. Commençons par la déclaration vide,
+où $Stm$ est la première déclaration, $Stm'$ celle qui suit après son exécution, 
+$\mathcal{S}$ l'état initial et $\mathcal{S}'$  l'état successeur. Commençons 
+par la déclaration vide,
 
-\begin{mathpar}
-	\inferrule*[]
-	{ }
-	{\textit{Skip}, \sigma_A \longrightarrow \emptyset, \sigma_A}
-\end{mathpar}
+\srule{ }{\semanticd{\sskip}{\sigma}{\emptyset}{\sigma}}
+
 Poursuivons avec la déclaration de l'assignation,
-\begin{mathpar}
-	\inferrule*[]
-	{ }
-	{Id:=a,\sigma_A \longrightarrow \emptyset, \sigma_A' : Id \longmapsto [\![a]\!]^A(\sigma_A)}
-\end{mathpar}
-Ici, le nouvel état $\sigma_A'$ lie l'identifiant de la variable assignée, à la valeur de l'expression arithmétique $[\![a]\!]^A$.
-Poursuivons avec la règle de la séquence entre deux déclarations, d'une part si la première termine,
-\begin{mathpar}
-	\inferrule*[]
-	{Stm_1,\sigma \longrightarrow \emptyset,\sigma'}
-	{Stm_1;Stm_2,\sigma \longrightarrow Stm_2, \sigma'}
-\end{mathpar}
+\srule{ }{\semanticd{\sassign{Id}{a}}{\sigma}{\emptyset}{\sigma'[Id\longmapsto\intr{a}{A}{\sigma}]}}
+Ici, le nouvel état $\sigma'$ lie l'identifiant de la variable assignée, à la 
+valeur de l'expression arithmétique $\intrfun{a}{A}$. Poursuivons avec la règle 
+de la séquence entre deux déclarations, d'une part si la première termine,
+\srule{\semanticd{Stm_1}{\sigma}{\emptyset}{\sigma'}}
+{\semanticd{\sseq{Stm_1}{Stm_2}}{\sigma}{Stm_2}{\sigma'}}
 D'autre part, si la première ne termine pas,
-\begin{mathpar}
-	\inferrule*[]
-	{Stm_1,\sigma \longrightarrow Stm_1',\sigma'}
-	{Stm_1;Stm_2,\sigma \longrightarrow Stm_1';Stm_2,\sigma'}
-\end{mathpar}
+\srule{\semanticd{Stm_1}{\sigma}{Stm_1'}{\sigma'}}
+{\semanticd{\sseq{Stm_1}{Stm_2}}{\sigma}{\sseq{Stm_1'}{Stm_2}}{\sigma'}}
 La condition peut se formaliser de la sorte dans le cas où la garde est vérifiée,
-\begin{mathpar}
-	\inferrule*[]
-	{[\![b]\!]^B(\sigma_B)}
-	{\text{if }b\text{ then }Stm_1\text{ else }Stm_2, \sigma_B \longrightarrow Stm_1, \sigma_B}
-\end{mathpar}
+\srule{\intr{b}{B}{\sigma}}
+{\semanticd{\ifthenelse{b}{Stm_1}{Stm_2}}{\sigma}{Stm_1}{\sigma}}
 Dans le cas où elle ne l'est pas,
-\begin{mathpar}
-	\inferrule*[]
-	{\neg[\![b]\!]^B(\sigma_B)}
-	{\text{if }b\text{ then }Stm_1\text{ else }Stm_2, \sigma_B \longrightarrow Stm_2, \sigma_B}
-\end{mathpar}
-La dernière de nos déclarations est la boucle while, celle-ci peut en fait être décrite grâce à la déclaration de la condition de la manière suivante,
+\srule{\neg\intr{b}{B}{\sigma}}
+{\semanticd{\ifthenelse{b}{Stm_1}{Stm_2}}{\sigma}{Stm_2}{\sigma}}
+La dernière de nos déclarations est la boucle while, celle-ci peut en fait être 
+décrite grâce à la déclaration de la condition de la manière suivante,
 \[
-\text{while } b \text{ do }Stm
+\whiledo{b}{Stm}
 \equiv_d
-\text{if }b\text{ then }Stm\text{ while }b\text{ do }Stm\text{ else }\textit{Skip}
+\ifthenelse{b}{\whiledo{b}{Stm}}{\sskip}
 \]
 Ainsi, on peut déclarer la règle qui suit pour la déclaration while,
-\begin{mathpar}
-	\inferrule*[]
-	{[\![b]\!]^B(\sigma_B)}
-	{\text{while }b\text{ do }Stm, \sigma_B \longrightarrow Stm\text{ ; while }b\text{ do }Stm,\sigma_B}
-\end{mathpar}
+\srule{\intr{b}{B}{\sigma}}
+{\semanticd{\whiledo{b}{Stm}}{\sigma}{\sseq{Stm}{\whiledo{b}{Stm}}}{\sigma}}

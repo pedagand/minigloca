@@ -32,3 +32,23 @@
 \newcommand{\whiledo}[2] {
     \text{while }{#1}\text{ do }{#2}
 }
+
+\newcommand{\intrfun}[2] {
+    [\![{#1}]\!]^{#2}
+}
+
+\newcommand{\intr}[3] {
+    \intrfun{#1}{#2} ({#3})
+}
+
+\newcommand{\semanticd}[4] {
+    {#1},\space{#2}\longrightarrow{#3},\space{#4}
+}
+
+\newcommand{\srule}[2] {
+    \begin{mathpar}
+        \inferrule*[]
+        {#1}
+        {#2}
+    \end{mathpar}
+}
