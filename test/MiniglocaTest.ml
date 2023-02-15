@@ -25,4 +25,6 @@ let () =
           test_case "Control Flow Graph construction" `Quick
             ControlFlow.test_cfg;
         ] );
+      ( "analysis-tests",
+        [ test_case "Dataflow Tests" `Quick Analysis.test_dataflow ] );
     ]
