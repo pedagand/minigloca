@@ -4,7 +4,8 @@ fonction. Cela sera donc utile pour fournir un algorithme qui termine, lors de l
 étant donné que l'ensemble des variables d'un programme est supposé fini.
 \\
 \\
-On se consacre, dans cette partie, à montrer la monotonie de notre ensemble $LIVE_{in}[l]$ pour toute étiquette de blocs. Posons la fonction,
+On se consacre, dans cette partie, à montrer la monotonie de nos ensembles $LIVE_{in}[l]$ et $LIVE_{out}[l]$
+pour toute étiquette $l$ de blocs. Posons la fonction,
 \begin{align*}
 	f_l : \mathcal{P}(V) &\longrightarrow \mathcal{P}(V) \\
 	\mathcal{O} &\longmapsto GEN[l] \cup (\mathcal{O} - KILL[l])
@@ -14,4 +15,8 @@ Soient $k, k' \in \mathcal{P}(V)$ tels que $k \subseteq k'$, alors on a,
 	k - KILL[l] &\subseteq k' - KILL[l] \text{ et,}\\
 	GEN[l] \cup (k - KILL[l]) &\subseteq GEN[l] \cup (k' - KILL[l]).
 \end{align*}
-Donc $f_l(k) \subseteq f_l(k')$ donc $f_l$ est monotone. On a ainsi que $LIVE_{in}[l]$, dépendant de $LIVE_{out}[l]$, est monotone.
+Donc $f_l(k) \subseteq f_l(k')$ ce qui implique $f_l$ monotone. Comme $LIVE_{out}[l]$ est une union de tous les $LIVE_{in}$
+de ses successeurs et que $f_l$ est une fonction monotone, on a que $LIVE_{out}[l]$ est monotone pour tout $l$, par récurrence
+sur la monotonie de l'union. Il vient de plus que $LIVE_{in}[l]$, dépendant de $LIVE_{out}[l]$, est monotone.
+Ainsi ces deux fonctions dépendants de l'étiquette d'un bloc sont monotones et produisent des ensembles finis, étant donné
+la finitude de $\mathcal{V}$ dans notre cas.

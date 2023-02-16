@@ -28,4 +28,10 @@ moins $m$ bits avec $m = \#V$.
 Une amélioration peut être simplement faite sur l'algorithme décrit ci-dessus. Effectivement, on peut remarquer que,
 à chaque modification de $LIVE_{out}[l]$ seul les blocs successeurs seront susceptibles de s'altérer. Donc
 au lieu d'itérer à nouveau sur l'ensemble des blocs, itérer uniquement sur les blocs successeurs au dernier
-bloc altéré. Cette approche a pour nom naturel de \textit{worklist}.
+bloc altéré. Cette approche a pour nom naturel de \textit{worklist}. 
+\\
+\\
+La correction de l'algorithme est la suivante, elle repose en partie sur ce qui a été dit en amont de cette section.
+En effet, à chaque itération, dans laquelle l'on vérifie si le point fixe a ou non été atteint, on met à jour les
+tableaux $live_{in}[l]$ et $live_{out}[l]$ pour tout bloc. Mais comme pour ce faire, on utilise deux fonctions monotones croissantes et qu'on suppose
+l'ensemble de nos variables finis, on est assuré de trouver le plus petit point fixe existant et ainsi terminer l'algorithme.
