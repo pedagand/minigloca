@@ -36,18 +36,17 @@ let rec blocks_of stm blocks =
       blocks_of s bl_b
 
 let labels stm =
-  let rec acc lb_list = function
+  let rec go lb_list = function
     | Assign t -> t.label :: lb_list
     | Skip t -> t.label :: lb_list
-    | Ifte (t, s_1, s_2) -> t.label :: acc (acc lb_list s_1) s_2
-    | While (t, s) -> t.label :: acc lb_list s
-    | Seq (s_1, s_2) -> acc (acc lb_list s_1) s_2
+    | Ifte (t, s_1, s_2) -> go (go (t.label :: lb_list) s_1) s_2
+    | While (t, s) -> go (t.label :: lb_list) s
+    | Seq (s_1, s_2) -> go (go lb_list s_1) s_2
   in
-  acc [] stm
+  go [] stm
 
 let is_statement_well_formed stm =
   let lbls = labels stm in
-  (* On ne considèrera pas la liste triée *)
   let lbls_sorted = List.sort compare_label lbls in
   let rec check = function
     | [] -> true
