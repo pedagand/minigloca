@@ -1,0 +1,20 @@
+(env
+ (_
+  (flags :standard -w -27-26-32-33)))
+
+(menhir
+ (modules parser))
+
+(ocamllex lexer)
+
+(executable
+ (name minigloca)
+ (modules Minigloca)
+ (libraries MiniglocaLib))
+
+(library
+ (name MiniglocaLib)
+ (preprocess
+  (pps ppx_deriving.show ppx_deriving.ord ppx_deriving.eq))
+ (libraries ppx_deriving pprint)
+ (modules Ast Interpreter Label Parser Lexer))
