@@ -15,8 +15,8 @@ Maintenant les blocs correctement définis, il nous faut pouvoir les lier à une
 	(\sassign{Id}{Exp_a})^l&\longmapsto\{(l, Id := Exp_a)\}\\
 	\sseq{s_1}{s_2} &\longmapsto \beta(s_1) \cup \beta(s_2)\\
 	\sskip^l &\longmapsto \{(l, \textit{Skip})\}\\
-	\ifthenelse{b^l}{s_1}{s_2} &\longmapsto \{(l, b)\}\cup \beta(s_1)\cup\beta(s_2)\\
-	\whiledo{b^l}{s} &\longmapsto \{(l, b)\}\cup\beta(s)
+	\sifthenelse{b^l}{s_1}{s_2} &\longmapsto \{(l, b)\}\cup \beta(s_1)\cup\beta(s_2)\\
+	\swhiledo{b^l}{s} &\longmapsto \{(l, b)\}\cup\beta(s)
 \end{align*}
 À partir de là, il est possible de formaliser les graphes orientés de flot. Les blocs en représentent les noeuds, et le passage 
 vers le bloc suivant est représenté par un arc.

@@ -24,17 +24,17 @@ D'autre part, si la première ne termine pas,
 {\semanticd{\sseq{Stm_1}{Stm_2}}{\sigma}{\sseq{Stm_1'}{Stm_2}}{\sigma'}}
 La condition peut se formaliser de la sorte dans le cas où la garde est vérifiée,
 \srule{\intr{b}{B}{\sigma}}
-{\semanticd{\ifthenelse{b}{Stm_1}{Stm_2}}{\sigma}{Stm_1}{\sigma}}
+{\semanticd{\sifthenelse{b}{Stm_1}{Stm_2}}{\sigma}{Stm_1}{\sigma}}
 Dans le cas où elle ne l'est pas,
 \srule{\neg\intr{b}{B}{\sigma}}
-{\semanticd{\ifthenelse{b}{Stm_1}{Stm_2}}{\sigma}{Stm_2}{\sigma}}
+{\semanticd{\sifthenelse{b}{Stm_1}{Stm_2}}{\sigma}{Stm_2}{\sigma}}
 La dernière de nos déclarations est la boucle while, celle-ci peut en fait être 
 décrite grâce à la déclaration de la condition de la manière suivante,
 \[
-\whiledo{b}{Stm}
+\swhiledo{b}{Stm}
 \equiv_d
-\ifthenelse{b}{\whiledo{b}{Stm}}{\sskip}
+\sifthenelse{b}{\swhiledo{b}{Stm}}{\sskip}
 \]
 Ainsi, on peut déclarer la règle qui suit pour la déclaration while,
 \srule{\intr{b}{B}{\sigma}}
-{\semanticd{\whiledo{b}{Stm}}{\sigma}{\sseq{Stm}{\whiledo{b}{Stm}}}{\sigma}}
+{\semanticd{\swhiledo{b}{Stm}}{\sigma}{\sseq{Stm}{\swhiledo{b}{Stm}}}{\sigma}}

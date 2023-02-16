@@ -21,8 +21,8 @@ On peut maintenant définir la fonction $\iota$, qui retournera la première ét
 	(\sassign{Id}{Exp_a})^l &\longmapsto l\\
 	\sseq{s_1}{s_2} &\longmapsto \iota(s_1)\\
 	{\sskip}^l &\longmapsto l\\
-	\ifthenelse{b^l}{s_1}{s_2} &\longmapsto l\\
-	\whiledo{b^l}{s} &\longmapsto l
+	\sifthenelse{b^l}{s_1}{s_2} &\longmapsto l\\
+	\swhiledo{b^l}{s} &\longmapsto l
 \end{align*}
 Comme expliqué précédemment, il est aussi nécessaire de déclarer une fonction $\phi$ qui retournera l'ensemble des étiquettes finales 
 à la fin d'un bloc $\pi$.
@@ -32,6 +32,6 @@ Comme expliqué précédemment, il est aussi nécessaire de déclarer une foncti
 	(\sassign{Id}{Exp_a})^l &\longmapsto \{l\}\\
 	\sseq{s_1}{s_2} &\longmapsto \phi(s_2)\\
 	\sskip^l &\longmapsto \{l\}\\
-	\ifthenelse{b^l}{s_1}{s_2} &\longmapsto \phi(s_1) \cup \phi(s_2)\\
-	\whiledo{b^l}{s} &\longmapsto \{l\}
+	\sifthenelse{b^l}{s_1}{s_2} &\longmapsto \phi(s_1) \cup \phi(s_2)\\
+	\swhiledo{b^l}{s} &\longmapsto \{l\}
 \end{align*}

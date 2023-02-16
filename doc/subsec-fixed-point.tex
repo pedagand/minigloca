@@ -3,7 +3,7 @@ Revenons-en à l'existence d'un point fixe, pour pouvoir construire un algorithm
 on a que $(\mathcal{P}(V), \subseteq)$ l'ensemble de nos variables est un ordre partiel et est fini.
 Ainsi, grâce à la monotonie de nos deux ensembles $LIVE_{in}$ et $LIVE_{out}$ démontrée ci-dessus, il
 vient qu'à chaque itération de notre algorithme, l'ensemble produit sera soit identique à l'ensemble précédent,
-soit plus gros et la finitude de l'ensemble des variables assure qu'il ne pourra par grossir indéfiniment. On se sert pour se faire
+soit plus gros et la finitude de l'ensemble des variables assure qu'il ne pourra par grossir indéfiniment. On se sert pour ce faire
 du théorème du point fixe de Kleene qui s'énnonce comme suit,
 \newline
 \newline
@@ -12,17 +12,28 @@ Soit $(L, \sqsubseteq)$ un ordre partiellement ordonné, avec un plus petit él�
 une application $f : L \longrightarrow L$ monotone. Alors il existe un point fixe minimal qui est le suprémum de la suite,
 \[\perp \sqsubseteq f(\perp) \sqsubseteq f^2(\perp) \sqsubseteq \cdots \sqsubseteq f^k(\perp) \sqsubseteq \cdots\]
 }
-Commençons par décrire un algorithme de point fixe naïf qu'est le suivant,
-\begin{align*}
-	&\text{Soit } \mathcal{B} := \beta(Block) \textit{  (ordonné du bloc final au bloc initial)}\\
-	&\textbf{Pour } (l, B) \in \mathcal{B}\text{, } live[l] := \emptyset\\
-	&\textbf{Tant que }live[\cdot]\text{ s'altère,}\\
-	&\textbf{Pour } (i, B) \in \mathcal{B}\text{, }\\
-	&live[i] := gen[i] \cup (\bigcup\limits_{p\in succ(i)} live[p] - kill[i])
-\end{align*}
+\begin{algorithm}
+\caption{Itération du point fixe}
+\begin{algorithmic}
+	\State {Soit $S$ le programme}
+	\State $\mathcal{B} \leftarrow \beta(S)$
+	\State {Soit $L$ l'ensemble des étiquettes de $\mathcal{B}$}
+	\For{$l \in L$}
+		\State $live_{in}[l] \leftarrow \emptyset$
+		\State $live_{out}[l] \leftarrow \emptyset$
+	\EndFor
+	\While{$live_{in} \ne live_{in}' \textbf{ ou } live_{out} \ne live_{out}'$}
+		\For{$l \in L$}
+			\State $live_{out}[l] \leftarrow \bigcup\limits_{p\in succ(l)} live_{in}[p]$
+			\State $live_{in}[l] \leftarrow gen[l] \cup (live_{out}[l] - kill[l])$
+		\EndFor
+	\EndWhile
+\end{algorithmic}
+\end{algorithm}
+
 Si $n = \#\mathcal{B}$, alors cet algorithme a une complexité en $O(kn)$, où $k$ est la hauteur du diagramme
 de Hasse sur $(\mathcal{P}(V), \subseteq)$. Cela se montre grâce à la monotonie de $LIVE_{in}$, en effet, 
-celle-ci ne reste jamais sur un même niveau du diagramme et ne fait que progresser vers $\top$.
+celle-ci ne fait que croître vers $\top$.
 Concernant l'implémentation, il peut être intéressant de définir $live$ comme une structure binaire de taille au
 moins $m$ bits avec $m = \#V$.
 Une amélioration peut être simplement faite sur l'algorithme décrit ci-dessus. Effectivement, on peut remarquer que,
@@ -34,4 +45,4 @@ bloc altéré. Cette approche a pour nom naturel de \textit{worklist}.
 La correction de l'algorithme est la suivante, elle repose en partie sur ce qui a été dit en amont de cette section.
 En effet, à chaque itération, dans laquelle l'on vérifie si le point fixe a ou non été atteint, on met à jour les
 tableaux $live_{in}[l]$ et $live_{out}[l]$ pour tout bloc. Mais comme pour ce faire, on utilise deux fonctions monotones croissantes et qu'on suppose
-l'ensemble de nos variables finis, on est assuré de trouver le plus petit point fixe existant et ainsi terminer l'algorithme.
+l'ensemble de nos variables fini, on est assuré de trouver le plus petit point fixe existant (par le théorème de Kleene) et ainsi de terminer l'algorithme.

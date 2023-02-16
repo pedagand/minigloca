@@ -9,8 +9,8 @@ Pour ce faire, considérons l'application suivante,
 	\sassign{Id}{Exp_a} &\longmapsto \emptyset \\
 	\sskip &\longmapsto \emptyset \\
 	\sseq{s_1}{s_2} &\longmapsto \varrho(s_1) \cup \varrho(s_2) \cup [\phi(s_1)\times\{\iota(s_2)\}] \\
-	\ifthenelse{b^l}{s_1}{s_2} &\longmapsto \varrho(s_1)\cup\varrho(s_2)\cup(l, \iota(s_1))\cup(l, \iota(s_2)) \\
-	\whiledo{b^l}{s} &\longmapsto \varrho(s)\cup(l,\iota(s))\cup[\phi(s)\times\{l\}]
+	\sifthenelse{b^l}{s_1}{s_2} &\longmapsto \varrho(s_1)\cup\varrho(s_2)\cup(l, \iota(s_1))\cup(l, \iota(s_2)) \\
+	\swhiledo{b^l}{s} &\longmapsto \varrho(s)\cup(l,\iota(s))\cup[\phi(s)\times\{l\}]
 \end{align*}
 On introduira aussi un accès à l'ensemble des successeurs d'un bloc par la fonction,
 \begin{align*}
