@@ -1,8 +1,8 @@
 \newcommand{\deftype}[2]{
     ${#1}\rightarrow$\foreach[count=\i] \e in {#2} {
-        \ifnum\i>1$\mid$\fi
-        \space${\e}$\\
-    }
+            \ifnum\i>1$\mid$\fi
+            \space${\e}$\\
+        }
 }
 
 \newcommand{\definition}[1] {
@@ -34,7 +34,7 @@
 }
 
 \newcommand{\intrfun}[2] {
-    [\![{#1}]\!]^{#2}
+[\![{#1}]\!]^{#2}
 }
 
 \newcommand{\intr}[3] {
@@ -54,11 +54,11 @@
 }
 
 \newenvironment{dtype}[1]{
-\newcommand{\inlinekind}[1]{##1}
-\newcommand{\kind}[1]{\mid##1}
-\newcommand{\akind}[1]{&\kind{##1}}
-\newcommand{\with}[1]{&##1\\}
-\csname align*\endcsname
-#1 &\rightarrow}{
-\csname endalign*\endcsname
+    \newcommand{\inlinekind}[1]{##1}
+    \newcommand{\kind}[1]{\mid##1}
+    \newcommand{\akind}[1]{&\kind{##1}}
+    \newcommand{\with}[1]{&##1\\}
+    \csname align*\endcsname
+    #1 &\rightarrow}{
+    \csname endalign*\endcsname
 }
