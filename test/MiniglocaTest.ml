@@ -8,7 +8,8 @@ let () =
       ( "semantic-tests",
         [
           test_case "Tests over interpreter" `Quick Interpreter.test_interpreter;
-          test_case "Tests over well formed statements" `Quick Interpreter.test_iswf;
+          test_case "Tests over well formed statements" `Quick
+            Interpreter.test_iswf;
         ] );
       ( "cfg-tests",
         [
@@ -16,5 +17,9 @@ let () =
             ControlFlow.test_cfg;
         ] );
       ( "analysis-tests",
-        [ test_case "Tests over dataflow" `Quick Analysis.test_dataflow ] );
+        [
+          test_case "Tests over dataflow" `Quick Analysis.test_dataflow;
+          test_case "Tests over deadcode elimination" `Quick
+            Meta.deadcode_elimination_test;
+        ] );
     ]
