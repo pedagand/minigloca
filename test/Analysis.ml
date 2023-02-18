@@ -1,12 +1,17 @@
 open MiniglocaLib.Analysis
 open MiniglocaLib.Label
 
+let pp_map_iter f m = LabelMap.iter (fun _ v -> f v) m
+
 let test_gloca_dataflow tag ast check_lin check_lout =
-  let lin, lout = dataflow ast in
-  Alcotest.(check bool)
-    tag true
-    (LabelMap.equal Vars.equal check_lin lin
-    && LabelMap.equal Vars.equal check_lout lout)
+  let lin, lout = dataflow dataflow_nv ast in
+  let lm_testable =
+    Alcotest.testable
+      (Fmt.brackets (Fmt.iter ~sep:(Fmt.any "; ") pp_map_iter (Fmt.braces (Fmt.iter ~sep:(Fmt.any ", ") Vars.iter Fmt.string))))
+      (LabelMap.equal Vars.equal)
+  in
+  Alcotest.(check lm_testable) tag check_lin lin;
+  Alcotest.(check lm_testable) tag check_lout lout
 
 let test_dataflow () =
   let top = Vars.of_list [ "a"; "b" ] in

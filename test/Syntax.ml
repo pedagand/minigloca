@@ -1,52 +1,82 @@
 open MiniglocaLib
 
-let test_syntax_plus () =
-  let a, b = (Random.int 1000, Random.int 1000) in
-  Alcotest.(check bool)
-    "Same arithmetic expression" true
-    (Ast.equal_a (Plus (Int a, Int b)) Ast.Syntax.(Int a + Int b))
+let test_syntax_gloca tag ast check =
+  Alcotest.(check (Alcotest.testable Ast.pp_s Ast.equal_s)) tag check ast
 
-let test_syntax_minus () =
-  let a, b = (Random.int 1000, Random.int 1000) in
-  Alcotest.(check bool)
-    "Same arithmetic expression" true
-    (Ast.equal_a (Minus (Int a, Int b)) Ast.Syntax.(Int a - Int b))
+let test_syntax () =
+  test_syntax_gloca "Syntax #1" (Test_1.gloca ())
+    (Ast.Seq
+       ( Ast.Assign { Ast.cnt = ("a", Ast.Int 5); label = 9 },
+         Ast.Seq
+           ( Ast.Assign { Ast.cnt = ("b", Ast.Int 8); label = 8 },
+             Ast.Seq
+               ( Ast.While
+                   ( { Ast.cnt = Ast.Lt (Ast.Id "a", Ast.Int 50); label = 7 },
+                     Ast.Seq
+                       ( Ast.Assign { Ast.cnt = ("c", Ast.Int 1); label = 6 },
+                         Ast.Seq
+                           ( Ast.Assign { Ast.cnt = ("f", Ast.Int 2); label = 5 },
+                             Ast.Assign
+                               {
+                                 Ast.cnt =
+                                   ("a", Ast.Plus (Ast.Id "a", Ast.Int 1));
+                                 label = 4;
+                               } ) ) ),
+                 Ast.Ifte
+                   ( { Ast.cnt = Ast.Lt (Ast.Id "b", Ast.Int 2); label = 3 },
+                     Ast.Assign { Ast.cnt = ("a", Ast.Int 1); label = 2 },
+                     Ast.Assign { Ast.cnt = ("a", Ast.Int 0); label = 1 } ) ) )
+       ));
 
-let test_syntax_times () =
-  let a, b = (Random.int 1000, Random.int 1000) in
-  Alcotest.(check bool)
-    "Same arithmetic expression" true
-    (Ast.equal_a (Times (Int a, Int b)) Ast.Syntax.(Int a * Int b))
+  test_syntax_gloca "Syntax #2" (Test_2.gloca ())
+    (Ast.Seq
+       ( Ast.Assign { Ast.cnt = ("a", Ast.Int 1); label = 7 },
+         Ast.Seq
+           ( Ast.Assign { Ast.cnt = ("b", Ast.Int 20); label = 6 },
+             Ast.Seq
+               ( Ast.Ifte
+                   ( { Ast.cnt = Ast.Lt (Ast.Id "a", Ast.Int 3); label = 5 },
+                     Ast.Assign { Ast.cnt = ("c", Ast.Int 4); label = 4 },
+                     Ast.Assign { Ast.cnt = ("c", Ast.Int 6); label = 3 } ),
+                 Ast.While
+                   ( { Ast.cnt = Ast.Lt (Ast.Id "b", Ast.Int 100); label = 2 },
+                     Ast.Assign
+                       {
+                         Ast.cnt = ("b", Ast.Plus (Ast.Id "b", Ast.Int 1));
+                         label = 1;
+                       } ) ) ) ));
 
-let test_syntax_lt () =
-  Alcotest.(check bool)
-    "Lesser than operator" true
-    (Ast.equal_b (Lt (Int 0, Int 1)) Ast.Syntax.(Int 0 < Int 1))
-
-let test_syntax_eq () =
-  Alcotest.(check bool)
-    "Equal operator" true
-    (Ast.equal_b (Eq (Int 0, Int 1)) Ast.Syntax.(Int 0 = Int 1))
-
-let test_syntax_and () =
-  Alcotest.(check bool)
-    "And operator" true
-    (Ast.equal_b (And (True, False)) Ast.Syntax.(True && False))
-
-let test_syntax_or () =
-  Alcotest.(check bool)
-    "Or operator" true
-    (Ast.equal_b (Or (True, False)) Ast.Syntax.(True || False))
-
-let test_syntax_not () =
-  Alcotest.(check bool)
-    "Not operator" true
-    (Ast.equal_b (Not True) Ast.Syntax.(not True))
-
-let test_syntax_assign () =
-  Ast.fl := !Ast.fl - !Ast.fl;
-  Alcotest.(check bool)
-    "Assign operator" true
-    (Ast.equal_s
-       (Ast.Assign { cnt = ("x", Ast.Int 1); label = 5 })
-       Ast.Syntax.("x" := Ast.Int 1))
+  test_syntax_gloca "Syntax #3" (Test_3.gloca ())
+    (Ast.Seq
+       ( Ast.Assign { Ast.cnt = ("a", Ast.Int 1); label = 9 },
+         Ast.Seq
+           ( Ast.Assign { Ast.cnt = ("b", Ast.Int 0); label = 8 },
+             Ast.While
+               ( { Ast.cnt = Ast.Lt (Ast.Id "b", Ast.Int 100); label = 7 },
+                 Ast.Seq
+                   ( Ast.Ifte
+                       ( { Ast.cnt = Ast.Lt (Ast.Id "a", Ast.Int 50); label = 6 },
+                         Ast.Assign
+                           {
+                             Ast.cnt = ("a", Ast.Times (Ast.Id "a", Ast.Int 2));
+                             label = 5;
+                           },
+                         Ast.Assign { Ast.cnt = ("a", Ast.Int 100); label = 4 }
+                       ),
+                     Ast.Seq
+                       ( Ast.While
+                           ( {
+                               Ast.cnt = Ast.Lt (Ast.Id "a", Ast.Id "b");
+                               label = 3;
+                             },
+                             Ast.Assign
+                               {
+                                 Ast.cnt =
+                                   ("a", Ast.Plus (Ast.Id "a", Ast.Int 1));
+                                 label = 2;
+                               } ),
+                         Ast.Assign
+                           {
+                             Ast.cnt = ("b", Ast.Plus (Ast.Id "b", Ast.Int 1));
+                             label = 1;
+                           } ) ) ) ) ))
