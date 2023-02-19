@@ -30,7 +30,7 @@ let rec reduction stm lv_analysis =
       match red with Some v -> Some (While (t, v)) | None -> None)
 
 let rec deadcode_elimination stm =
-  let _, lv_out = dataflow dataflow_nv stm in
+  let _, lv_out = dataflow stm in
   let reduced = reduction stm lv_out in
   match reduced with
   | Some r when not (equal_s stm r) -> deadcode_elimination r

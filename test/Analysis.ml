@@ -4,7 +4,7 @@ open MiniglocaLib.Label
 let pp_map_iter f m = LabelMap.iter (fun _ v -> f v) m
 
 let test_gloca_dataflow tag ast check_lin check_lout =
-  let lin, lout = dataflow dataflow_nv ast in
+  let lin, lout = dataflow ast in
   let lm_testable =
     Alcotest.testable
       (Fmt.brackets (Fmt.iter ~sep:(Fmt.any "; ") pp_map_iter (Fmt.braces (Fmt.iter ~sep:(Fmt.any ", ") Vars.iter Fmt.string))))
