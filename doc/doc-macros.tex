@@ -1,0 +1,64 @@
+\newcommand{\deftype}[2]{
+    ${#1}\rightarrow$\foreach[count=\i] \e in {#2} {
+            \ifnum\i>1$\mid$\fi
+            \space${\e}$\\
+        }
+}
+
+\newcommand{\definition}[1] {
+    \textbf{\textit{Définition --\space}}{#1}
+}
+
+\newcommand{\theorem}[1] {
+    \textbf{\textit{Théorème --\space}}{#1}
+}
+
+\newcommand{\sassign}[2] {
+    {#1}\space:=\space{#2}
+}
+
+\newcommand{\sseq}[2] {
+    {#1}\space;\space{#2}
+}
+
+\newcommand{\sskip}{
+    \textit{Skip}
+}
+
+\newcommand{\sifthenelse}[3] {
+    \text{if }{#1}\text{ then }{#2}\text{ else }{#3}
+}
+
+\newcommand{\swhiledo}[2] {
+    \text{while }{#1}\text{ do }{#2}
+}
+
+\newcommand{\intrfun}[2] {
+[\![{#1}]\!]^{#2}
+}
+
+\newcommand{\intr}[3] {
+    \intrfun{#1}{#2} ({#3})
+}
+
+\newcommand{\semanticd}[4] {
+    {#1},\space{#2}\longrightarrow{#3},\space{#4}
+}
+
+\newcommand{\srule}[2] {
+    \begin{mathpar}
+        \inferrule*[]
+        {#1}
+        {#2}
+    \end{mathpar}
+}
+
+\newenvironment{dtype}[1]{
+    \newcommand{\inlinekind}[1]{##1}
+    \newcommand{\kind}[1]{\mid##1}
+    \newcommand{\akind}[1]{&\kind{##1}}
+    \newcommand{\with}[1]{&##1\\}
+    \csname align*\endcsname
+    #1 &\rightarrow}{
+    \csname endalign*\endcsname
+}
