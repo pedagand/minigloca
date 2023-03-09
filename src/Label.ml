@@ -10,7 +10,7 @@ module Label = struct
 end
 
 module Edge = struct
-  type t = int * int [@@deriving ord]
+  type t = int * int
 
   let compare e_a e_b = compare e_a e_b
 end

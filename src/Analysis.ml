@@ -37,6 +37,8 @@ let succ cfg l =
   acc (EdgeSet.elements cfg) []
 
 (*
+  A naive idea of the algorithm:
+
   For all l in L
     LIVE_IN[l] := \emptyset
     LIVE_OUT[l] := \emptyset
@@ -67,10 +69,12 @@ let rec update lblocks cfg lin lout =
       update t cfg (LabelMap.add l live_in lin) (LabelMap.add l live_out lout)
 
 let rec dataflow_nv lblocks cfg lin lout =
-  let lin', lout' = update lblocks cfg lin lout in
+  let lin', lout' = update (LabelMap.bindings lblocks) cfg lin lout in
   if LabelMap.equal Vars.equal lin lin' && LabelMap.equal Vars.equal lout lout'
   then (lin', lout')
   else dataflow_nv lblocks cfg lin' lout'
+
+(* Worklist algorithm implementation *)
 
 let rec dataflow_wl wl lblocks cfg lin lout =
   match wl with
@@ -79,21 +83,21 @@ let rec dataflow_wl wl lblocks cfg lin lout =
       let b = LabelMap.find l lblocks in
       let live_out' = LabelMap.find l lout in
       let live_in' = LabelMap.find l lin in
-      let live_in = Vars.union (gen b) (Vars.diff live_out' (kill b)) in
       let succs = succ cfg l in
       let live_out = successor_blocks_union succs lin in
-      let wl' = if live_out' = live_out then t else t @ succs in
+      let live_in = Vars.union (gen b) (Vars.diff live_out (kill b)) in
+      let wl' =
+        if live_out' = live_out && live_in' = live_in then t else succs @ t
+      in
       dataflow_wl wl' lblocks cfg
         (LabelMap.add l live_in lin)
         (LabelMap.add l live_out lout)
 
 let dataflow stm =
   let labels = labels stm in
-  let blocks = blocks_of stm LabelMap.empty in  
+  let blocks = blocks_of stm LabelMap.empty in
   let flow = flow_of stm in
   let fold_go m e = LabelMap.add e Vars.empty m in
   let lin = List.fold_left fold_go LabelMap.empty labels in
   let lout = List.fold_left fold_go LabelMap.empty labels in
-  (* dataflow_wl (List.rev labels) blocks flow lin lout *)
-  (* dataflow_wl labels blocks flow lin lout *)
-  dataflow_nv (LabelMap.bindings blocks) flow lin lout
+  dataflow_wl labels blocks flow lin lout
