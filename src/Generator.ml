@@ -1,63 +1,29 @@
 open Ast
 open Random
 
-type a_actions =
-  | ACTION_ID
-  | ACTION_INT
-  | ACTION_PLUS
-  | ACTION_MINUS
-  | ACTION_TIMES
-
-let a_actions_list =
-  [| ACTION_INT; ACTION_ID; ACTION_PLUS; ACTION_MINUS; ACTION_TIMES |]
-
-type b_actions =
-  | ACTION_TRUE
-  | ACTION_FALSE
-  | ACTION_LT
-  | ACTION_EQ
-  | ACTION_AND
-  | ACTION_OR
-  | ACTION_NOT
-
-let b_actions_list =
-  [|
-    ACTION_TRUE;
-    ACTION_FALSE;
-    ACTION_LT;
-    ACTION_EQ;
-    ACTION_AND;
-    ACTION_OR;
-    ACTION_NOT;
-  |]
-
-type s_actions = ACTION_ASSIGN | ACTION_IFTE | ACTION_WHILE
-
-let s_actions_list = [| ACTION_ASSIGN; ACTION_IFTE; ACTION_WHILE |]
-
 let rec gen_a vars i depth =
-  let depth_index = if depth = 0 then 2 else Array.length a_actions_list in
+  let depth_index = if depth = 0 then 2 else 3 in
   let bound = if i = 0 then 1 else depth_index in
   let nd = depth - 1 in
-  let op = a_actions_list.(Random.int bound) in
+  let op = Random.int bound in
   match op with
-  | ACTION_INT -> Int (Random.bits ())
-  | ACTION_ID -> Id vars.(Random.int i)
-  | ACTION_PLUS -> Plus (gen_a vars i nd, gen_a vars i nd)
-  | ACTION_MINUS -> Minus (gen_a vars i nd, gen_a vars i nd)
-  | ACTION_TIMES -> Times (gen_a vars i nd, gen_a vars i nd)
+  | 0 -> Int (Random.bits ())
+  | 1 -> Id vars.(Random.int i)
+  | 2 -> Plus (gen_a vars i nd, gen_a vars i nd)
+  | 3 -> Minus (gen_a vars i nd, gen_a vars i nd)
+  | _ -> Times (gen_a vars i nd, gen_a vars i nd)
 
 let rec gen_b vars i depth =
-  let bound = Array.length b_actions_list in
-  let op = b_actions_list.(Random.int bound) in
+  let bound = 7 in
+  let op = Random.int bound in
   match op with
-  | ACTION_TRUE -> True
-  | ACTION_FALSE -> False
-  | ACTION_LT -> Lt (gen_a vars i depth, gen_a vars i depth)
-  | ACTION_EQ -> Eq (gen_a vars i depth, gen_a vars i depth)
-  | ACTION_AND -> And (gen_b vars i 1, gen_b vars i 1)
-  | ACTION_OR -> Or (gen_b vars i 1, gen_b vars i 1)
-  | ACTION_NOT -> Not (gen_b vars i 1)
+  | 0 -> True
+  | 1 -> False
+  | 2 -> Lt (gen_a vars i depth, gen_a vars i depth)
+  | 3 -> Eq (gen_a vars i depth, gen_a vars i depth)
+  | 4 -> And (gen_b vars i 1, gen_b vars i 1)
+  | 5 -> Or (gen_b vars i 1, gen_b vars i 1)
+  | _ -> Not (gen_b vars i 1)
 
 let gen_nomenclature x = string_of_int x
 
@@ -69,13 +35,13 @@ let rec generate vars i bound =
 
 and gen_s vars i =
   let len = Array.length vars in
-  let gamma = 2 * len / 5 * len in
-  let bound = Array.length s_actions_list in
-  let op = s_actions_list.(max 0 (Random.int (gamma * bound) - (gamma - 1) * bound)) in
+  let gamma = 3 * len / 5 * len in
+  let bound = 3 in
+  let op = max 0 (Random.int (gamma * bound) - (gamma - 1) * bound) in
   match op with
-  | ACTION_ASSIGN -> (i + 1, gen_assign vars i)
-  | ACTION_IFTE -> gen_ifte vars i
-  | ACTION_WHILE -> gen_while vars i
+  | 0 -> (i + 1, gen_assign vars i)
+  | 1 -> gen_ifte vars i
+  | _ -> gen_while vars i
 
 and gen_assign vars i =
   let var_name = gen_nomenclature i in
