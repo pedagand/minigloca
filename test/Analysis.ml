@@ -1,27 +1,31 @@
 open MiniglocaLib.Analysis
 open MiniglocaLib.Label
+(* open MiniglocaLib *)
 
 let pp_map_iter f m = LabelMap.iter (fun _ v -> f v) m
 
 let test_gloca_dataflow tag ast =
-  let lin, lout = dataflow ast DATAFLOW_WORKLIST in
-  let lin', lout' = dataflow ast DATAFLOW_NAIVE in
+  let lin, lout = dataflow ast dataflow_wl in
+  let lin', lout' = dataflow ast dataflow_nv in
   let lm_testable =
     Alcotest.testable
       (Fmt.brackets (Fmt.iter ~sep:(Fmt.any "; ") pp_map_iter (Fmt.braces (Fmt.iter ~sep:(Fmt.any ", ") Vars.iter Fmt.string))))
       (LabelMap.equal Vars.equal)
   in
+  (* Alcotest.(check bool) "Stability" true (is_fixpoint_stable ast (lin, lout)); *)
+  Printf.printf "%s\n" (MiniglocaLib.Ast.show_s ast);
   Alcotest.(check lm_testable) tag lin' lin;
   Alcotest.(check lm_testable) tag lout' lout
 
-  let rec iterations vars_size i tests = 
+  let rec iterations vars_size i tests =
+    MiniglocaLib.Ast.fl := 0;
     let vars = Array.make vars_size "" in
     let s = MiniglocaLib.Generator.generate vars 0 (Array.length vars) in
     test_gloca_dataflow (string_of_int i) s;
     
     if i < tests then iterations vars_size (i + 1) tests else () 
 
-let test_dataflow () = iterations 100 0 10;
+let test_dataflow () = iterations 100 0 100
   (* let top = Vars.of_list [ "a"; "b" ] in
   let a = Vars.of_list [ "a" ] in
   let b = Vars.of_list [ "b" ] in

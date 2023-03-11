@@ -36,6 +36,15 @@ let succ cfg l =
   in
   acc (EdgeSet.elements cfg) []
 
+let pred cfg l =
+  let rec acc edges s =
+    match edges with
+    | [] -> s
+    | (e, e') :: t when e' = l -> acc t (e :: s)
+    | _ :: t -> acc t s
+  in
+  acc (EdgeSet.elements cfg) []
+
 (*
   A naive idea of the algorithm:
 
@@ -52,58 +61,70 @@ let succ cfg l =
       LIVE_OUT[l] = UNION OF LIVE_IN[l'], l' in succ(l)
 *)
 
+type an_structure = {
+  blocks : block LabelMap.t;
+  lblocks : (label * block) list;
+  flow : EdgeSet.t;
+}
+
 let rec successor_blocks_union succ of_set =
   match succ with
   | [] -> Vars.empty
   | h :: t ->
-    Vars.union (LabelMap.find h of_set) (successor_blocks_union t of_set)
-    
-let rec update lblocks cfg lin lout =
-  match lblocks with
+      Vars.union (LabelMap.find h of_set) (successor_blocks_union t of_set)
+
+let rec update an_s lin lout =
+  match an_s.lblocks with
   | [] -> (lin, lout)
   | (l, b) :: t ->
-    let live_in =
-      Vars.union (gen b) (Vars.diff (LabelMap.find l lout) (kill b))
+      let live_out = successor_blocks_union (succ an_s.flow l) lin in
+      let live_in =
+        Vars.union (gen b) (Vars.diff live_out (kill b))
       in
-      let live_out = successor_blocks_union (succ cfg l) lin in
-      update t cfg (LabelMap.add l live_in lin) (LabelMap.add l live_out lout)
+      update { an_s with lblocks = t }
+        (LabelMap.add l live_in lin)
+        (LabelMap.add l live_out lout)
 
-      let rec dataflow_nv lblocks cfg lin lout =
-        let lin', lout' = update (LabelMap.bindings lblocks) cfg lin lout in
-        if LabelMap.equal Vars.equal lin lin' && LabelMap.equal Vars.equal lout lout'
+let rec dataflow_nv wl an_s lin lout =
+  let lin', lout' = update an_s lin lout in
+  if LabelMap.equal Vars.equal lin lin' && LabelMap.equal Vars.equal lout lout'
   then (lin', lout')
-      else dataflow_nv lblocks cfg lin' lout'
-      
+  else dataflow_nv wl an_s lin' lout'
+
 (* Worklist algorithm implementation *)
 
-let rec dataflow_wl wl lblocks cfg lin lout =
+let rec dataflow_wl wl an_s lin lout =
   match wl with
   | [] -> (lin, lout)
   | l :: t ->
-    let b = LabelMap.find l lblocks in
-    let live_out' = LabelMap.find l lout in
-    let live_in' = LabelMap.find l lin in
-    let succs = succ cfg l in
+      let b = LabelMap.find l an_s.blocks in
+      let live_out' = LabelMap.find l lout in
+      let live_in' = LabelMap.find l lin in
+      let succs = succ an_s.flow l in
       let live_out = successor_blocks_union succs lin in
       let live_in = Vars.union (gen b) (Vars.diff live_out (kill b)) in
       let wl' =
-      if live_out' = live_out && live_in' = live_in then t else succs @ t
+        if live_in' = live_in then t else (pred an_s.flow l) @ t
       in
-      dataflow_wl wl' lblocks cfg
-      (LabelMap.add l live_in lin)
+      dataflow_wl wl' an_s
+        (LabelMap.add l live_in lin)
         (LabelMap.add l live_out lout)
-        
-type algorithm = DATAFLOW_NAIVE | DATAFLOW_WORKLIST
+
+let build_analysis_structure stm =
+  let blocks = blocks_of stm LabelMap.empty in
+  let flow = flow_of stm in
+  { blocks; lblocks = LabelMap.bindings blocks; flow }
 
 let dataflow stm algo =
   let labels = labels stm in
-  let blocks = blocks_of stm LabelMap.empty in
-  let flow = flow_of stm in
+  let an_s = build_analysis_structure stm in
   let fold_go m e = LabelMap.add e Vars.empty m in
   let lin = List.fold_left fold_go LabelMap.empty labels in
   let lout = List.fold_left fold_go LabelMap.empty labels in
-  match algo with
-  | DATAFLOW_NAIVE -> dataflow_nv blocks flow lin lout
-  | DATAFLOW_WORKLIST -> dataflow_wl labels blocks flow lin lout
-  
-  let is_fixpoint_minimal fp = ()
+  algo labels an_s lin lout
+
+let is_fixpoint_stable stm fp =
+  let lin, lout = fp in
+  let an_s = build_analysis_structure stm in
+  let lin', lout' = update an_s lin lout in
+  LabelMap.equal Vars.equal lin lin' && LabelMap.equal Vars.equal lout lout'

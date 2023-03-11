@@ -68,7 +68,8 @@ let rec generate vars i bound =
     Syntax.( ^ ) s_1 (generate vars ni bound)
 
 and gen_s vars i =
-  let gamma = Array.length vars / 2 + 1 in
+  let len = Array.length vars in
+  let gamma = 2 * len / 5 * len in
   let bound = Array.length s_actions_list in
   let op = s_actions_list.(max 0 (Random.int (gamma * bound) - (gamma - 1) * bound)) in
   match op with
@@ -92,4 +93,4 @@ and gen_ifte vars i =
 
 and gen_while vars i =
   let sub_bound = Random.int (Array.length vars - i) in
-  (i + sub_bound, Syntax.whiledo (gen_b vars i 2) (generate vars i (i + sub_bound)))
+  (i + sub_bound, Syntax.whiledo (gen_b vars i 1) (generate vars i (i + sub_bound)))
