@@ -123,6 +123,11 @@ let dataflow stm algo =
   let lout = List.fold_left fold_go LabelMap.empty labels in
   algo labels an_s lin lout
 
+let incr_dataflow stm lin lout algo =
+  let labels = labels stm in
+  let an_s = build_analysis_structure stm in
+  algo labels an_s lin lout
+
 let is_fixpoint_stable stm fp =
   let lin, lout = fp in
   let an_s = build_analysis_structure stm in
