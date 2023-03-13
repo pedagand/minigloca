@@ -1,0 +1,22 @@
+a := 1;
+b := a;
+c := a + b;
+while c < 100 do
+	if b < 10 then
+		a := b * 2
+	else
+		while a * b < 60 do
+            d := 5 + a;
+            e := d * 3;
+            b := 4 * a + e
+        done
+	endif;
+	d := 3 * c + b;
+	if c > 100 then
+		c := d + 1
+	else
+		c := c + 1
+	endif;
+	e := b;
+	b := b + 3
+done

@@ -18,8 +18,8 @@ let () =
         ] );
       ( "analysis-tests",
         [
-          test_case "Tests over dataflow" `Quick Analysis.test_dataflow;
-          test_case "Tests over deadcode elimination" `Quick
+          test_case "Tests over dataflow" `Slow Analysis.test_dataflow;
+          test_case "Tests over deadcode elimination" `Slow
             Meta.deadcode_elimination_test;
         ] );
     ]
