@@ -1,0 +1,18 @@
+a := 1;
+b := a;
+c := a + b;
+while c < 100 || c = 100 do
+	if b < 10 then
+		a := b * 2
+	else
+		b := a * c
+	endif;
+	d := 3 * c + a;
+	if c > 100 then
+		c := d + 1
+	else
+		c := c + 1
+	endif;
+	e := b;
+	b := b + 3
+done

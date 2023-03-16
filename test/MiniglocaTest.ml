@@ -18,7 +18,7 @@ let () =
         ] );
       ( "analysis-tests",
         [
-          test_case "Tests over dataflow" `Quick Analysis.test_dataflow;
+          test_case "Tests over dataflow" `Slow Analysis.test_dataflow;
           test_case "Tests over deadcode elimination" `Quick
             Meta.deadcode_elimination_test;
         ] );

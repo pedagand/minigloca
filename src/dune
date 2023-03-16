@@ -17,4 +17,4 @@
  (preprocess
   (pps ppx_deriving.show ppx_deriving.ord ppx_deriving.eq))
  (libraries ppx_deriving pprint)
- (modules Ast Analysis Interpreter Meta Label Parser Lexer))
+ (modules Ast Analysis Generator Interpreter Meta Label Parser Lexer))
