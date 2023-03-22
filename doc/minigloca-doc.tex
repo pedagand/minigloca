@@ -417,5 +417,104 @@ La correction de l'algorithme est la suivante, elle repose en partie sur ce qui 
 En effet, à chaque itération, dans laquelle l'on vérifie si le point fixe a ou non été atteint, on met à jour les
 tableaux $live_{in}[l]$ et $live_{out}[l]$ pour tout bloc. Mais comme pour ce faire, on utilise deux fonctions monotones croissantes et qu'on suppose
 l'ensemble de nos variables fini, on est assuré de trouver le plus petit point fixe existant (par le théorème de Kleene) et ainsi de terminer l'algorithme.
+\\
+\\
+Dans cette étude, nous travaillerons avec les deux algorithmes évoqués pour réaliser les tests unitaires. Ci-dessous, un aperçu du fonctionnement
+de l'algorithme par worklist.
 
+\begin{algorithm}
+	\caption{Itération du point fixe (worklist)}
+	\begin{algorithmic}
+		\State {Soit $S$ le programme}
+		\State {Soit $L$ l'ensemble des étiquettes de $\mathcal{B}$}
+		\State $\mathcal{Q} \leftarrow L$ une queue des étiquettes
+		\For{$l \in L$}
+		\State $live_{in}[l] \leftarrow \emptyset$
+		\State $live_{out}[l] \leftarrow \emptyset$
+		\EndFor
+		\While{$\#\mathcal{Q} > 0$}
+		\State $q \leftarrow \mathcal{Q}$.pop
+		\State $live_{out}[q] \leftarrow \bigcup\limits_{p\in succ(q)} live_{in}[p]$
+		\State $live_{in}[q] \leftarrow gen[q] \cup (live_{out}[q] - kill[q])$
+		\EndWhile
+	\end{algorithmic}
+\end{algorithm}
+
+\section{Génération}
+Dans l'optique de vérification de la robustesse de nos différentes analyses, il peut être bon de réaliser
+des tests unitaires sur chacune d'elles. Pour cela on ne se restreindra pas aux tests conçus pas nous-même
+mais on essayera aussi de trouver tous les cas de figure par la manière forte. Un générateur de code complètement
+arbitraire est alors une bonne solution pour réaliser de tels tests. Dans notre cas, il permettra de mettre en
+lumière défaut sur l'algorithme de worklist.
+\\
+Ce générateur de code est ajusté par un paramètre qu'est la quantité de variables assignées du programme. On
+cherche également à ce que le code généré soit le plus proche possible de celui qu'aurait pû fournir un humain.
+Dans notre syntaxe, il suffit pour le moment de donner une certaine répartition lors de la création des déclarations,
+en donnant plus de chance à l'assignation d'apparaître, que des blocs Ifte ou Whiledo par exemple.
+
+\section{Élimination de code mort}
+Cette analyse permet une première optimisation qu'est l'élimination de code mort. Elle consiste, en pré-compilation,
+à générer un nouveau code à partir du code initial, dans lequel le code dit mort n'est plus présent.
+On définira ici le code mort comme un ensemble de blocs d'un programme qui ne seront jamais utilisés.
+
+\subsection{Première réduction}
+Cette optimisation peut en premier lieu être abordée de manière naïve. On notera $A$ l'analyse de flot de donnée.
+Considérons $\Delta$ la fonction d'élimination du code mort définie comme:
+\[\Delta : A \times Stm \longrightarrow Stm\]
+qui, à partir du code d'un programme et d'une analyse de flot de donnée, produit un nouveau code. $\Delta$ est itérée
+jusqu'à atteindre un point fixe sur le code envoyé, et le code reçu.	
+
+\subsection{Seconde réduction}
+L'algortihme de cette seconde réduction consiste à ne pas calculer à nouveau l'analyse de vivacité pour le
+code nouvellement créé à chaque itération mais d'essayer, en une seule itération, de réutiliser l'analyse précédente.
+Pour résumer l'idée, voilà comment nous pourrions définir cette fois notre application de réduction,
+\[\Delta : A \times Stm \longrightarrow A \times Stm \]
+Par rapport à l'implémentation de la première réduction, pas grand chose ne change, un cas nous intéresse en particulier,
+celui de la séquence. On va, dans cette partie, montrer que cette réduction fonctionne correctement et fournit une
+élimination de code mort convenable.
+\\
+\\
+D'abord, il est intéressant de noter que, l'atomicité ou non d'un bloc ne pose pas problème, en effet, au sein d'un bloc,
+l'on parcourt chaque séquence et l'on y applique l'analyse comme si le bloc était atomique. La preuve sera néanmoins rédigée
+sur notre modèle, c'est-à-dire avec l'atomicité de chaque bloc.
+Comme indiqué plus haut, la séquence nous intéresse plus particulièrement car c'est cette partie de l'AST qui rappelle la réduction
+avec une nouvelle analyse, celle qui aura été faite sur le programme réduit de sa seconde déclaration. Raisonnons par récurrence, le cas
+initial permettra de mettre au clair les précédents propos. Considérons donc un programme simple $S$ de deux instructions séquencées
+composant respectivement les blocs $b_0$ et $b_1$, comme suit,
+\[S \equiv_d \sseq{s_0}{s_1}\]
+où $s_0$ et $s_1$ sont des déclarations atomiques, c'est-à-dire ou une assignation, ou une condition, ou un skip. Cela permettra la récurrence
+sur les blocs. Soit $\mathcal{D}$ la première analyse de vivacité faite à partir de $\bot$ sur $S$. On a plus précisément dans cette analyse,
+\begin{align*}
+	\livein{b_0} 	&= \sgen{b_0} \cup (\liveout{b_0} - \skill{b_0})\\ 
+					&= \livein{b_1} - \skill{b_0}\\
+	\liveout{b_0} 	&= \livein{b_1}\\
+	\livein{b_1} 	&= \sgen{b_1}\\
+	\liveout{b_1} 	&= \emptyset
+\end{align*}
+On se donne en plus de cela, $V = \{a, b\}$ notre ensemble de variables, de cardinal deux étant donné qu'on suppose deux déclarations atomiques, donc
+au plus deux variables d'assignées.
+Plusieurs cas sont à traiter. Si $s_1$ ne dépend nullement de $s_0$, alors $\mathcal{D}$ sera l'analyse de vivacité utilisé tout le long
+de la réduction.
+Sinon, cela signifie que $s_1$ utilise dans son expression une variable déclarée dans $s_0$, mettons $\liveout{b_0} = \livein{b_1} = \{a\}$ et
+$\livein{b_0} = \emptyset$. On effecture alors la première réduction sur $s_1$ avec $\mathcal{D}$ qui nous permet de calculer $\mathcal{D}'$.
+Voilà où l'algorithme par worklist entre en jeu. En effet, si $s_1' \ne s_1$ on peut naturellement prétendre que $\mathcal{D}$ n'est plus un point fixe
+stable. Soit $\mathcal{C}_{s_1}$ le graphe de flot de contrôle de $s_1$, inclu dans $\mathcal{C}_{S}$ le graphe de flot de contrôle de $S$, le programme
+tout entier. Ainsi l'algorithme, à partir de $\mathcal{D}$, ne modifie que l'ensemble de blocs appartenant à $\mathcal{C}_{s_1}$. Lorsque l'analyse à
+l'entrée d'un bloc est changée, l'ensemble des blocs prédecesseurs du bloc en question sont également mis-à-jour. Ainsi l'on trouve un
+point fixe pour $S'$ le programme dans lequel, $s_1$ a été réduit. $\mathcal{D}'$ peut enfin être appliquée pour effectuer la réduction de $s_0$, la première
+déclaration de la séquence.
+\\
+\\
+Supposons désormais cette l'analyse de vivacité correcte à la n-ème séquence. Posons $\mathcal{A}$ ces $n$ séquences, définie comme,
+\[\mathcal{A} = s_n ; s_{n-1} ; \cdots ; s_0\]
+On considère alors,
+\[\sseq{s_{n + 1}}{\mathcal{A}}\]
+La réduction s'effectue d'abord sur $\mathcal{A}$ qui produit la nouvelle séquence $\mathcal{A}'$ et l'on a $\mathcal{D}^{(n)}$ l'analyse de vivacité obtenue à 
+partir de $\mathcal{D}$ sur $\mathcal{A}'$.
+Si $\mathcal{A}\ne\mathcal{A}'$ et en particulier, $s_n \ne s_n'$, alors l'analyse de vivacité sur le bloc de $s_{n+1}$ dans $\mathcal{D}$ sera différente
+à l'analyse de vivacité de ce même bloc dans $\mathcal{D}^{(n)}$. Donc si $\mathcal{A}$ dépendait de $s_{n+1}$ on a bien la réduction qui se propage jusqu'à
+cette dernière déclaration.
+Dans le cas où $\mathcal{D}^{(n)}=\mathcal{D}$, comme au cas initial, la réduction se poursuit sur $s_{n+1}$ avec la première analyse de vivacité. Cela conclut
+la preuve de la seconde réduction.
+\hfill $\blacksquare$
 \end{document}
