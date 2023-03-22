@@ -7,7 +7,7 @@ let deadcode_elimination_test_gloca tag ast =
   Alcotest.(check (option (Alcotest.testable pp_s equal_s)))
     tag nv_reduction ic_reduction
 
-let deadcode_elimination_test () = Generator.iterate_on 2 deadcode_elimination_test_gloca 0 10
+let deadcode_elimination_test () = Generator.iterate_on 4 deadcode_elimination_test_gloca 0 30
   (* deadcode_elimination_test_gloca "Deadcode elimination test #1"
     (Test_1.gloca ());
 
