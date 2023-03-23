@@ -8,11 +8,3 @@ let deadcode_elimination_test_gloca tag ast =
     tag nv_reduction ic_reduction
 
 let deadcode_elimination_test () = Generator.iterate_on 4 deadcode_elimination_test_gloca 0 30
-  (* deadcode_elimination_test_gloca "Deadcode elimination test #1"
-    (Test_1.gloca ());
-
-  deadcode_elimination_test_gloca "Deadcode elimination test #2"
-    (Test_2.gloca ());
-    
-  deadcode_elimination_test_gloca "Deadcode elimination test #3"
-    (Test_3.gloca ()) *)

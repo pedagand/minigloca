@@ -68,14 +68,14 @@ let rec reduction stm lv_analysis =
       While (t, red)
 
 let rec deadcode_elimination stm =
-  let _, lv_out = dataflow stm dataflow_wl in
+  let _, lv_out = dataflow stm dataflow_nv in
   let reduced = reduction stm lv_out in
-  let opt_reduced = skip_reduction stm in
+  let opt_reduced = skip_reduction reduced in
   match opt_reduced with
   | Some r when not (equal_s stm r) -> deadcode_elimination r
   | _ -> opt_reduced
 
 let incr_deadcode_elimination stm =
-  let analysis = dataflow stm dataflow_wl in
+  let analysis = dataflow stm dataflow_nv in
   let reduced = iterative_reduction stm analysis in
   skip_reduction stm
