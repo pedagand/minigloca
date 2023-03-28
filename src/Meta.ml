@@ -26,27 +26,31 @@ let rec skip_reduction stm =
       let opt_s = skip_reduction s in
       match opt_s with Some o_s -> Some (While (t, o_s)) | _ -> None)
 
-let rec iterative_reduction stm analysis =
+let rec iterative_reduction p stm analysis =
   let lin, lout = analysis in
   match stm with
-  | Assign t ->
+  | Assign t as assign ->
       let id, _ = t.cnt in
-      if Vars.mem id (LabelMap.find t.label lout) then Assign t
-      else Syntax.skip ~l:t.label ()
+      if Vars.mem id (LabelMap.find t.label lout) then (analysis, assign)
+      else (dataflow_filter_bloc p t.label analysis, Syntax.skip ~l:t.label ())
   | Seq (s_1, s_2) ->
-      let rs_2 = iterative_reduction s_2 analysis in
-      let rs_1 =
-        iterative_reduction s_1 (incr_dataflow rs_2 lin lout dataflow_wl)
+      let an_2, rs_2 = iterative_reduction p s_2 analysis in
+      (* pprint_dataflow an_2; *)
+      let an_1, rs_1 =
+        iterative_reduction
+          (Seq (s_1, rs_2))
+          s_2
+          (incr_dataflow rs_2 an_2 dataflow_wl)
       in
-      Seq (rs_1, rs_2)
-  | Skip t as s -> s
+      (an_1, Seq (rs_1, rs_2))
+  | Skip t as s -> (analysis, s)
   | Ifte (t, s_1, s_2) ->
-      let rs_1 = iterative_reduction s_1 analysis in
-      let rs_2 = iterative_reduction s_2 analysis in
-      Ifte (t, rs_1, rs_2)
+      let an_1, rs_1 = iterative_reduction p s_1 analysis in
+      let an_2, rs_2 = iterative_reduction p s_2 an_1 in
+      (an_2, Ifte (t, rs_1, rs_2))
   | While (t, s) ->
-      let red = iterative_reduction s analysis in
-      While (t, red)
+      let an, red = iterative_reduction p s analysis in
+      (an, While (t, red))
 
 let rec reduction stm lv_analysis =
   match stm with
@@ -77,5 +81,6 @@ let rec deadcode_elimination stm =
 
 let incr_deadcode_elimination stm =
   let analysis = dataflow stm dataflow_nv in
-  let reduced = iterative_reduction stm analysis in
-  skip_reduction stm
+  (* pprint_dataflow analysis; *)
+  let f_analysis, reduced = iterative_reduction stm stm analysis in
+  skip_reduction reduced
