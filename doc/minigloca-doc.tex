@@ -378,11 +378,12 @@ soit plus gros et la finitude de l'ensemble des variables assure qu'il ne pourra
 du théorème du point fixe de Kleene qui s'énnonce comme suit,
 \newline
 \newline
-\theorem{
+\begin{theorem}	
 	Soit $(L, \sqsubseteq)$ un ordre partiellement ordonné, avec un plus petit élément  $\perp$ et soit
 	une application $f : L \longrightarrow L$ monotone. Alors il existe un point fixe minimal qui est le suprémum de la suite,
 	\[\perp \sqsubseteq f(\perp) \sqsubseteq f^2(\perp) \sqsubseteq \cdots \sqsubseteq f^k(\perp) \sqsubseteq \cdots\]
-}
+\end{theorem}
+
 \begin{algorithm}
 	\caption{Itération du point fixe}
 	\begin{algorithmic}
@@ -408,7 +409,7 @@ celle-ci ne fait que croître vers $\top$.
 Concernant l'implémentation, il peut être intéressant de définir $live$ comme une structure binaire de taille au
 moins $m$ bits avec $m = \#V$.
 Une amélioration peut être simplement faite sur l'algorithme décrit ci-dessus. Effectivement, on peut remarquer que,
-à chaque modification de $LIVE_{out}[l]$ seul les blocs successeurs seront susceptibles de s'altérer. Donc
+à chaque modification de $LIVE_{out}[l]$ seuls les blocs successeurs seront susceptibles de s'altérer. Donc
 au lieu d'itérer à nouveau sur l'ensemble des blocs, itérer uniquement sur les blocs successeurs au dernier
 bloc altéré. Cette approche a pour nom naturel de \textit{worklist}.
 \\
@@ -457,64 +458,56 @@ Cette analyse permet une première optimisation qu'est l'élimination de code mo
 à générer un nouveau code à partir du code initial, dans lequel le code dit mort n'est plus présent.
 On définira ici le code mort comme un ensemble de blocs d'un programme qui ne seront jamais utilisés.
 
-\subsection{Première réduction}
+\subsection{Réduction naïve}
 Cette optimisation peut en premier lieu être abordée de manière naïve. On notera $A$ l'analyse de flot de donnée.
 Considérons $\Delta$ la fonction d'élimination du code mort définie comme:
 \[\Delta : A \times Stm \longrightarrow Stm\]
 qui, à partir du code d'un programme et d'une analyse de flot de donnée, produit un nouveau code. $\Delta$ est itérée
 jusqu'à atteindre un point fixe sur le code envoyé, et le code reçu.	
 
-\subsection{Seconde réduction}
-L'algortihme de cette seconde réduction consiste à ne pas calculer à nouveau l'analyse de vivacité pour le
+\subsection{Incrémentalisation de la réduction}
+L'algorithme de cette seconde réduction consiste à ne pas calculer à nouveau l'analyse de vivacité pour le
 code nouvellement créé à chaque itération mais d'essayer, en une seule itération, de réutiliser l'analyse précédente.
 Pour résumer l'idée, voilà comment nous pourrions définir cette fois notre application de réduction,
 \[\Delta : A \times Stm \longrightarrow A \times Stm \]
-Par rapport à l'implémentation de la première réduction, pas grand chose ne change, un cas nous intéresse en particulier,
-celui de la séquence. On va, dans cette partie, montrer que cette réduction fonctionne correctement et fournit une
-élimination de code mort convenable.
+Cependant, si $P$ un programme, $\mu_P$ son analyse de vivacité (qui est un point fixe minimal) et $P' \subset P$ ce même programme
+réduit, alors il n'est pas possible d'utiliser l'analyse de vivacité de $P$ pour poursuivre la réduction, étant donné que
+$\mu_{P'} \sqsubseteq \mu_P$ et que, comme démontré plus haut, la recherche de point fixe est croissante monotone. Donc
+$\mu_P$ ne sera pas stable pour $P'$. On peut dès lors énoncer le théorème suivant;
 \\
 \\
-D'abord, il est intéressant de noter que, l'atomicité ou non d'un bloc ne pose pas problème, en effet, au sein d'un bloc,
-l'on parcourt chaque séquence et l'on y applique l'analyse comme si le bloc était atomique. La preuve sera néanmoins rédigée
-sur notre modèle, c'est-à-dire avec l'atomicité de chaque bloc.
-Comme indiqué plus haut, la séquence nous intéresse plus particulièrement car c'est cette partie de l'AST qui rappelle la réduction
-avec une nouvelle analyse, celle qui aura été faite sur le programme réduit de sa seconde déclaration. Raisonnons par récurrence, le cas
-initial permettra de mettre au clair les précédents propos. Considérons donc un programme simple $S$ de deux instructions séquencées
-composant respectivement les blocs $b_0$ et $b_1$, comme suit,
-\[S \equiv_d \sseq{s_0}{s_1}\]
-où $s_0$ et $s_1$ sont des déclarations atomiques, c'est-à-dire ou une assignation, ou une condition, ou un skip. Cela permettra la récurrence
-sur les blocs. Soit $\mathcal{D}$ la première analyse de vivacité faite à partir de $\bot$ sur $S$. On a plus précisément dans cette analyse,
-\begin{align*}
-	\livein{b_0} 	&= \sgen{b_0} \cup (\liveout{b_0} - \skill{b_0})\\ 
-					&= \livein{b_1} - \skill{b_0}\\
-	\liveout{b_0} 	&= \livein{b_1}\\
-	\livein{b_1} 	&= \sgen{b_1}\\
-	\liveout{b_1} 	&= \emptyset
-\end{align*}
-On se donne en plus de cela, $V = \{a, b\}$ notre ensemble de variables, de cardinal deux étant donné qu'on suppose deux déclarations atomiques, donc
-au plus deux variables d'assignées.
-Plusieurs cas sont à traiter. Si $s_1$ ne dépend nullement de $s_0$, alors $\mathcal{D}$ sera l'analyse de vivacité utilisé tout le long
-de la réduction.
-Sinon, cela signifie que $s_1$ utilise dans son expression une variable déclarée dans $s_0$, mettons $\liveout{b_0} = \livein{b_1} = \{a\}$ et
-$\livein{b_0} = \emptyset$. On effecture alors la première réduction sur $s_1$ avec $\mathcal{D}$ qui nous permet de calculer $\mathcal{D}'$.
-Voilà où l'algorithme par worklist entre en jeu. En effet, si $s_1' \ne s_1$ on peut naturellement prétendre que $\mathcal{D}$ n'est plus un point fixe
-stable. Soit $\mathcal{C}_{s_1}$ le graphe de flot de contrôle de $s_1$, inclu dans $\mathcal{C}_{S}$ le graphe de flot de contrôle de $S$, le programme
-tout entier. Ainsi l'algorithme, à partir de $\mathcal{D}$, ne modifie que l'ensemble de blocs appartenant à $\mathcal{C}_{s_1}$. Lorsque l'analyse à
-l'entrée d'un bloc est changée, l'ensemble des blocs prédecesseurs du bloc en question sont également mis-à-jour. Ainsi l'on trouve un
-point fixe pour $S'$ le programme dans lequel, $s_1$ a été réduit. $\mathcal{D}'$ peut enfin être appliquée pour effectuer la réduction de $s_0$, la première
-déclaration de la séquence.
+\begin{theorem}
+	Soient $P$ un programme, $\mu_P \in \mathcal{A}$ son analyse de vivacité et $P' \subset P$ sa réduction. Alors il existe un morphisme
+	$g : \mathcal{P} \times \mathcal{A} \longrightarrow \mathcal{A}$ monotone décroissant, tel que 
+	\[\chi_{P'} = g(P', \mu_P),\]
+	est un pré-point fixe et $\chi_{P'} \sqsubseteq \mu_{P'}$.
+\end{theorem}
 \\
 \\
-Supposons désormais cette l'analyse de vivacité correcte à la n-ème séquence. Posons $\mathcal{A}$ ces $n$ séquences, définie comme,
-\[\mathcal{A} = s_n ; s_{n-1} ; \cdots ; s_0\]
-On considère alors,
-\[\sseq{s_{n + 1}}{\mathcal{A}}\]
-La réduction s'effectue d'abord sur $\mathcal{A}$ qui produit la nouvelle séquence $\mathcal{A}'$ et l'on a $\mathcal{D}^{(n)}$ l'analyse de vivacité obtenue à 
-partir de $\mathcal{D}$ sur $\mathcal{A}'$.
-Si $\mathcal{A}\ne\mathcal{A}'$ et en particulier, $s_n \ne s_n'$, alors l'analyse de vivacité sur le bloc de $s_{n+1}$ dans $\mathcal{D}$ sera différente
-à l'analyse de vivacité de ce même bloc dans $\mathcal{D}^{(n)}$. Donc si $\mathcal{A}$ dépendait de $s_{n+1}$ on a bien la réduction qui se propage jusqu'à
-cette dernière déclaration.
-Dans le cas où $\mathcal{D}^{(n)}=\mathcal{D}$, comme au cas initial, la réduction se poursuit sur $s_{n+1}$ avec la première analyse de vivacité. Cela conclut
-la preuve de la seconde réduction.
-\hfill $\blacksquare$
+\begin{proof}
+	On montre l'existence d'un tel morphisme en le construisant. Considérons $g$, un programme $P \in \mathcal{P}$ et $\mu_P$ son analyse
+	de vivacité. Donnons $P'$ sa réduction. Par convénience, on notera $L = P - P'$ l'ensemble des étiquettes
+	ayant été altérée lors de la dernière réduction. Pour simplifier notre filtre, on considèrera la différence réduite à une unique étiquette notée $l$.
+	On remarquera que, seuls les blocs d'assignation sont pour le moment susceptibles d'être réduits. Ainsi, on cherche à propager la perte de vivacité pour les variables
+	dans l'ensemble $GEN[l]$. On notera $A$ l'ensemble des variables utilisées sur ce bloc. Pour se faire, il s'agit de parcourir le graphe de flot de contrôle
+	à partir du bloc réduit jusqu'à la racine. À chaque bloc rencontré, le filtre agira sur le treilli de la sorte,
+	\\
+	\\
+	Si l'on traite $\liveout{c}$ alors on lui assignera le nouvel ensemble 
+	\[\liveout{c} - A \subseteq \liveout{c}\] 
+	On continue ensuite le parcours.
+	\\
+	Si l'on traite $\livein{c}$ alors on a deux cas, étant donné que c'est cette partie du bloc en question qui détermine si les variables
+	de notre ensemble $A$ sont aussi utilisées avant le bloc réduit.
+	\begin{enumerate}
+		\item Si $A \subseteq GEN[c]$ alors il n'y a plus besoin de poursuivre le parcours. En effet les variables en question sont utilisées, donc il n'est pas nécessaire
+		de continuer la propagation.\\
+		\item Sinon, on lui assigne le nouvel ensemble
+		\[\livein{c} - A \subseteq \livein{c}\]
+		Il est ensuite nécessaire de poursuivre le parcours, étant donnée qu'en $c$, les variables comprises dans $A$ sont toujours considérées comme mortes.
+	\end{enumerate}
+	Ainsi, on a bien $g$ un morphisme monotone décroissant, en effet, à chaque altération, le nouvel ensemble produit à l'entrée ou la sortie d'un bloc est toujours
+	inclu dans l'ensemble original.
+	\hfill $\blacksquare$
+\end{proof}
 \end{document}

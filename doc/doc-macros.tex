@@ -9,9 +9,9 @@
     \textbf{\textit{Définition --\space}}{#1}
 }
 
-\newcommand{\theorem}[1] {
-    \textbf{\textit{Théorème --\space}}{#1}
-}
+% \newcommand{\theorem}[1] {
+%     \textbf{\textit{Théorème --\space}}{#1}
+% }
 
 \newcommand{\sassign}[2] {
     {#1}\space:=\space{#2}
@@ -46,11 +46,11 @@
 }
 
 \newcommand{\livein}[1]{
-    LIVE_{IN}[#1]
+    LIVE_{in}[#1]
 }
 
 \newcommand{\liveout}[1]{
-    LIVE_{OUT}[#1]
+    LIVE_{out}[#1]
 }
 
 \newcommand{\sgen}[1]{
@@ -78,3 +78,6 @@
     #1 &\rightarrow}{
     \csname endalign*\endcsname
 }
+
+\newenvironment{theorem}{\textbf{\textit{Théorème --\space}}}{}
+\newenvironment{proof}{\textbf{\textit{Démonstration --\space}}}{}
