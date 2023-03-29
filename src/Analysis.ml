@@ -102,8 +102,8 @@ let rec dataflow_nv wl an_s lin lout =
   then (lin', lout')
   else dataflow_nv wl an_s lin' lout'
 
-(* 
-   Worklist algorithm implementation
+(*
+    Worklist algorithm implementation
 *)
 
 let rec dataflow_wl wl an_s lin lout =
@@ -176,16 +176,16 @@ let pprint_dataflow (lin, lout) =
   dataflow analysis of the program P.
 
   This always returns a pre fixed-point (see the proof)
-  In fact, it can be noted that we always reach a fixed point.
 *)
 
 let dataflow_filter_bloc p l fp =
   let an_s = build_analysis_structure p in
   let bloc_gen = gen (LabelMap.find l an_s.blocks) in
-  let rec go edges analysis =
-    match edges with
+  let preds = pred an_s.flow l in
+  let rec go pred analysis =
+    match pred with
     | [] -> analysis
-    | (e, e') :: t when e' = l ->
+    | e :: t ->
         let lin, lout = analysis in
         (*
         In this case LIVE_OUT is always altered   
@@ -194,7 +194,7 @@ let dataflow_filter_bloc p l fp =
         let reduced_bloc_set = Vars.diff bloc_gen bloc_out_set in
         let lout' = LabelMap.add e reduced_bloc_set lout in
         (*
-        The LIVE_OUT case is different
+        The LIVE_IN case is different
         - if A belongs to gen[e] then we stop the graph search
         - otherwise LIVE_IN = LIVE_IN - A,  and it continues  
         *)
@@ -204,7 +204,6 @@ let dataflow_filter_bloc p l fp =
           let bloc_live_in = Vars.diff pred_gen bloc_gen in
           let lin' = LabelMap.add e bloc_live_in lin in
           go t (lin', lout')
-    | h :: t -> analysis
   in
   let ffp, sfp = fp in
-  go (EdgeSet.elements an_s.flow) (LabelMap.add l Vars.empty ffp, LabelMap.add l Vars.empty sfp)
+  go preds (LabelMap.add l Vars.empty ffp, LabelMap.add l Vars.empty sfp)

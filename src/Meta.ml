@@ -36,11 +36,12 @@ let rec iterative_reduction p stm analysis =
   | Seq (s_1, s_2) ->
       let an_2, rs_2 = iterative_reduction p s_2 analysis in
       (* pprint_dataflow an_2; *)
+      let p' = Seq (s_1, rs_2) in
       let an_1, rs_1 =
         iterative_reduction
-          (Seq (s_1, rs_2))
-          s_2
-          (incr_dataflow rs_2 an_2 dataflow_wl)
+          p
+          s_1
+          (incr_dataflow p' an_2 dataflow_wl)
       in
       (an_1, Seq (rs_1, rs_2))
   | Skip t as s -> (analysis, s)
@@ -74,13 +75,15 @@ let rec reduction stm lv_analysis =
 let rec deadcode_elimination stm =
   let _, lv_out = dataflow stm dataflow_nv in
   let reduced = reduction stm lv_out in
-  let opt_reduced = skip_reduction reduced in
+  (* let opt_reduced = skip_reduction reduced in
   match opt_reduced with
   | Some r when not (equal_s stm r) -> deadcode_elimination r
-  | _ -> opt_reduced
+  | _ -> reduced *)
+  if equal_s stm reduced then reduced else deadcode_elimination reduced
 
 let incr_deadcode_elimination stm =
   let analysis = dataflow stm dataflow_nv in
   (* pprint_dataflow analysis; *)
   let f_analysis, reduced = iterative_reduction stm stm analysis in
-  skip_reduction reduced
+  (* skip_reduction reduced *)
+  reduced
