@@ -487,13 +487,13 @@ $\mu_P$ ne sera pas stable pour $P'$. On peut dès lors énoncer le théorème s
 \begin{proof}
 	On montre l'existence d'un tel morphisme en le construisant. Considérons $g$, un programme $P \in \mathcal{P}$ et $\mu_P$ son analyse
 	de vivacité. Donnons $P'$ sa réduction. Par convénience, on notera $L = P - P'$ l'ensemble des étiquettes
-	ayant été altérée lors de la dernière réduction. Pour simplifier notre filtre, on considèrera la différence réduite à une unique étiquette notée $l$.
-	On remarquera que, seuls les blocs d'assignation sont pour le moment susceptibles d'être réduits. Ainsi, on cherche à propager la perte de vivacité pour les variables
-	dans l'ensemble $GEN[l]$. On notera $A$ l'ensemble des variables utilisées sur ce bloc. Pour se faire, il s'agit de parcourir le graphe de flot de contrôle
-	à partir du bloc réduit jusqu'à la racine. À chaque bloc rencontré, le filtre agira sur le treilli de la sorte,
+	ayant été altérée lors de la dernière réduction. Pour simplifier notre filtre, on considère la différence réduite à une unique étiquette notée $l$.
+	On remarque que, seuls les blocs d'assignation sont pour le moment susceptibles d'être réduits. Ainsi, on cherche à propager la perte de vivacité pour les variables
+	dans l'ensemble $GEN[l]$. On note $A$ l'ensemble des variables utilisées sur ce bloc. Pour se faire, il s'agit de parcourir le graphe de flot de contrôle
+	à partir du bloc réduit jusqu'à la racine. À chaque bloc rencontré, le filtre agit sur le treilli de la sorte,
 	\\
 	\\
-	Si l'on traite $\liveout{c}$ alors on lui assignera le nouvel ensemble 
+	Si l'on traite $\liveout{c}$ alors on lui assigne le nouvel ensemble 
 	\[\liveout{c} - A \subseteq \liveout{c}\] 
 	On continue ensuite le parcours.
 	\\
