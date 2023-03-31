@@ -11,7 +11,7 @@ let test_gloca_dataflow tag ast =
     Alcotest.testable
       (Fmt.brackets
          (Fmt.iter ~sep:(Fmt.any "; ") pp_map_iter
-            (Fmt.braces (Fmt.iter ~sep:(Fmt.any ", ") Vars.iter Fmt.string))))
+            (Fmt.braces (Fmt.iter ~sep:(Fmt.any ", ") Vars.iter Fmt.(pair ~sep:comma int string)))))
       (LabelMap.equal Vars.equal)
   in
   Alcotest.(check bool) "Stability" true (is_fixpoint_stable ast (lin, lout));

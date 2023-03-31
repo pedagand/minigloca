@@ -1,30 +1,38 @@
 open Ast
 open Label
-module Vars = Set.Make (String)
+(* module Vars = Set.Make (String) *)
 
-let rec vars_a e =
+module LabelVarPair = struct
+  type t = label * string
+
+  let compare (_, s_1) (_, s_2) = String.compare s_1 s_2
+end
+
+module Vars = Set.Make (LabelVarPair)
+
+let rec vars_a e from =
   match e with
   | Int i -> Vars.empty
-  | Id s -> Vars.singleton s
+  | Id s -> Vars.singleton (from, s)
   | Plus (a_1, a_2) | Minus (a_1, a_2) | Times (a_1, a_2) ->
-      Vars.union (vars_a a_1) (vars_a a_2)
+      Vars.union (vars_a a_1 from) (vars_a a_2 from)
 
-let rec vars_b e =
+let rec vars_b e from =
   match e with
   | True | False -> Vars.empty
-  | Lt (a_1, a_2) | Eq (a_1, a_2) -> Vars.union (vars_a a_1) (vars_a a_2)
-  | And (b_1, b_2) | Or (b_1, b_2) -> Vars.union (vars_b b_1) (vars_b b_2)
-  | Not b -> vars_b b
+  | Lt (a_1, a_2) | Eq (a_1, a_2) -> Vars.union (vars_a a_1 from) (vars_a a_2 from)
+  | And (b_1, b_2) | Or (b_1, b_2) -> Vars.union (vars_b b_1 from) (vars_b b_2 from)
+  | Not b -> vars_b b from
 
-let gen block =
+let gen (l, block) =
   match block with
-  | BlAssign (_, a) -> vars_a a
-  | BlExpBool b -> vars_b b
+  | BlAssign (_, a) -> vars_a a l
+  | BlExpBool b -> vars_b b l
   | BlSkip -> Vars.empty
 
-let kill block =
+let kill (l, block) =
   match block with
-  | BlAssign (s, _) -> Vars.singleton s
+  | BlAssign (s, _) -> Vars.singleton (l, s)
   | BlExpBool _ | BlSkip -> Vars.empty
 
 let succ cfg l =
@@ -89,9 +97,9 @@ let rec successor_blocks_union succ of_set =
 let rec update an_s lin lout =
   match an_s.lblocks with
   | [] -> (lin, lout)
-  | (l, b) :: t ->
+  | (l, b) as k :: t ->
       let live_out = successor_blocks_union (succ an_s.flow l) lin in
-      let live_in = Vars.union (gen b) (Vars.diff live_out (kill b)) in
+      let live_in = Vars.union (gen k) (Vars.diff live_out (kill k)) in
       update { an_s with lblocks = t }
         (LabelMap.add l live_in lin)
         (LabelMap.add l live_out lout)
@@ -115,7 +123,7 @@ let rec dataflow_wl wl an_s lin lout =
       let live_in' = LabelMap.find l lin in
       let succs = succ an_s.flow l in
       let live_out = successor_blocks_union succs lin in
-      let live_in = Vars.union (gen b) (Vars.diff live_out (kill b)) in
+      let live_in = Vars.union (gen (l, b)) (Vars.diff live_out (kill (l, b))) in
       let wl' = if live_in' = live_in then t else pred an_s.flow l @ t in
       dataflow_wl wl' an_s
         (LabelMap.add l live_in lin)
@@ -149,7 +157,7 @@ let is_fixpoint_stable stm fp =
   let lin', lout' = update an_s lin lout in
   LabelMap.equal Vars.equal lin lin' && LabelMap.equal Vars.equal lout lout'
 
-let pprint_vars vars = Vars.iter (fun e -> Printf.printf "%s, " e) vars
+let pprint_vars vars = Vars.iter (fun (l, b) -> Printf.printf "(%d:%s), " l b) vars
 
 let pprint_dataflow (lin, lout) =
   LabelMap.iter
@@ -166,44 +174,17 @@ let pprint_dataflow (lin, lout) =
       Printf.printf "}\n")
     lout
 
-(*
-  There we suppose that the given program is
-  included in the program that produced the fp
-  analysis.
-
-  It takes the program P before reduction
-  the label l of the reduced block and the
-  dataflow analysis of the program P.
-
-  This always returns a pre fixed-point (see the proof)
-*)
-
-let dataflow_filter_bloc p l fp =
-  let an_s = build_analysis_structure p in
-  let bloc_gen = gen (LabelMap.find l an_s.blocks) in
-  let preds = pred an_s.flow l in
-  let rec go pred analysis =
-    match pred with
-    | [] -> analysis
-    | e :: t ->
-        let lin, lout = analysis in
-        (*
-        In this case LIVE_OUT is always altered   
-        *)
-        let bloc_out_set = LabelMap.find e lout in
-        let reduced_bloc_set = Vars.diff bloc_gen bloc_out_set in
-        let lout' = LabelMap.add e reduced_bloc_set lout in
-        (*
-        The LIVE_IN case is different
-        - if A belongs to gen[e] then we stop the graph search
-        - otherwise LIVE_IN = LIVE_IN - A,  and it continues  
-        *)
-        let pred_gen = gen (LabelMap.find e an_s.blocks) in
-        if Vars.subset bloc_gen pred_gen then (lin, lout')
-        else
-          let bloc_live_in = Vars.diff pred_gen bloc_gen in
-          let lin' = LabelMap.add e bloc_live_in lin in
-          go t (lin', lout')
+let dataflow_filter l fp =
+  let din, dout = fp in
+  let rec help rl vars =
+    match rl with
+    | [] -> vars
+    | (lb, _) as k :: t when lb = l -> help t (Vars.remove k vars)
+    | _ :: t -> help t vars 
   in
-  let ffp, sfp = fp in
-  go preds (LabelMap.add l Vars.empty ffp, LabelMap.add l Vars.empty sfp)
+  let rec go at analysis =
+    match at with
+    | [] -> analysis
+    | (k, v) :: t -> go t (LabelMap.add k (help (Vars.elements v) v) analysis)
+  in
+  go (LabelMap.bindings din) din, go (LabelMap.bindings dout) dout

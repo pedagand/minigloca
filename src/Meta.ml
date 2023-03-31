@@ -31,33 +31,76 @@ let rec iterative_reduction p stm analysis =
   match stm with
   | Assign t as assign ->
       let id, _ = t.cnt in
-      if Vars.mem id (LabelMap.find t.label lout) then (analysis, assign)
-      else (dataflow_filter_bloc p t.label analysis, Syntax.skip ~l:t.label ())
-  | Seq (s_1, s_2) ->
-      let an_2, rs_2 = iterative_reduction p s_2 analysis in
-      (* pprint_dataflow an_2; *)
+      if Vars.mem (t.label, id) (LabelMap.find t.label lout) then
+        (analysis, assign)
+      else (dataflow_filter t.label analysis, Syntax.skip ~l:t.label ())
+
+  (*
+    Concerning the sequence, it is needed to take consideration of a parent
+    program. In each part, we stabilize the pre-fixed point found.
+  *)
+
+  | Seq (s_1, s_2) when p = None ->
+      let an_2, rs_2 = iterative_reduction (Some s_1) s_2 analysis in
+      pprint_dataflow an_2;
       let p' = Seq (s_1, rs_2) in
+      (* Printf.printf "%s\n" (show_s_gloca p'); *)
       let an_1, rs_1 =
-        iterative_reduction
-          p
-          s_1
-          (incr_dataflow p' an_2 dataflow_wl)
+        iterative_reduction p s_1 (incr_dataflow p' an_2 dataflow_wl)
       in
-      (an_1, Seq (rs_1, rs_2))
+      (incr_dataflow (Seq (rs_1, rs_2)) an_1 dataflow_wl, Seq (rs_1, rs_2))
+
+  (*
+    The sequence in the case of a pre program.
+  *)
+
+  | Seq (s_1, s_2) ->
+      let sp = Option.value p ~default:(Syntax.skip ()) in
+      let an_2, rs_2 =
+        iterative_reduction (Some (Seq (sp, s_1))) s_2 analysis
+      in
+      pprint_dataflow an_2;
+      let p' = Seq (sp, Seq (s_1, rs_2)) in
+      (* Printf.printf "%s\n" (show_s_gloca p'); *)
+      let an_1, rs_1 =
+        iterative_reduction p s_1 (incr_dataflow p' an_2 dataflow_wl)
+      in
+      ( incr_dataflow (Seq (sp, Seq (rs_1, rs_2))) an_1 dataflow_wl,
+        Seq (rs_1, rs_2) )
+
+  (*
+    In case of a Skip statement, we just need to return it with
+    the current analysis.     
+  *)
+
   | Skip t as s -> (analysis, s)
-  | Ifte (t, s_1, s_2) ->
-      let an_1, rs_1 = iterative_reduction p s_1 analysis in
-      let an_2, rs_2 = iterative_reduction p s_2 an_1 in
-      (an_2, Ifte (t, rs_1, rs_2))
-  | While (t, s) ->
-      let an, red = iterative_reduction p s analysis in
-      (an, While (t, red))
+  
+  (*
+    Concerning boolean blocks such as ifte and whiledo, we consider
+    each of their statement to be an independent program, hence
+    None parameter when calling iterative_reduction.
+
+    It is useless to find stabilize de pre-fixed point since at that point
+    we don't know about the whole program, i.e. we don't have access to the
+    whole control flow graph.
+  *)
+  
+  | Ifte (t, s_1, s_2) as i ->
+      let an_2, rs_2 = iterative_reduction None s_2 analysis in
+      let an_1, rs_1 = iterative_reduction None s_1 an_2 in
+      let ifte_fp = incr_dataflow (Ifte(t, rs_1, rs_2)) an_1 dataflow_wl in
+      (ifte_fp, Ifte (t, rs_1, rs_2))
+  | While (t, s) as w ->
+      let an, red = iterative_reduction None s analysis in
+      let whiledo_fp = incr_dataflow (While (t, red)) an dataflow_wl in
+      (whiledo_fp, While (t, red))
 
 let rec reduction stm lv_analysis =
   match stm with
   | Assign t ->
       let id, _ = t.cnt in
-      if Vars.mem id (LabelMap.find t.label lv_analysis) then Assign t
+      if Vars.mem (t.label, id) (LabelMap.find t.label lv_analysis) then
+        Assign t
       else Syntax.skip ~l:t.label ()
   | Seq (s_1, s_2) ->
       let red_s_1 = reduction s_1 lv_analysis in
@@ -76,14 +119,14 @@ let rec deadcode_elimination stm =
   let _, lv_out = dataflow stm dataflow_nv in
   let reduced = reduction stm lv_out in
   (* let opt_reduced = skip_reduction reduced in
-  match opt_reduced with
-  | Some r when not (equal_s stm r) -> deadcode_elimination r
-  | _ -> reduced *)
+     match opt_reduced with
+     | Some r when not (equal_s stm r) -> deadcode_elimination r
+     | _ -> reduced *)
   if equal_s stm reduced then reduced else deadcode_elimination reduced
 
 let incr_deadcode_elimination stm =
   let analysis = dataflow stm dataflow_nv in
-  (* pprint_dataflow analysis; *)
-  let f_analysis, reduced = iterative_reduction stm stm analysis in
+  pprint_dataflow analysis;
+  let _, reduced = iterative_reduction None stm analysis in
   (* skip_reduction reduced *)
   reduced
