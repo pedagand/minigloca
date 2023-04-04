@@ -461,7 +461,7 @@ On définira ici le code mort comme un ensemble de blocs d'un programme qui ne s
 \subsection{Réduction naïve}
 Cette optimisation peut en premier lieu être abordée de manière naïve. On notera $A$ l'analyse de flot de donnée.
 Considérons $\Delta$ la fonction d'élimination du code mort définie comme:
-\[\Delta : A \times Stm \longrightarrow Stm\]
+\[\Delta : \mathcal{A} \times Stm \longrightarrow Stm\]
 qui, à partir du code d'un programme et d'une analyse de flot de donnée, produit un nouveau code. $\Delta$ est itérée
 jusqu'à atteindre un point fixe sur le code envoyé, et le code reçu.	
 
@@ -469,45 +469,27 @@ jusqu'à atteindre un point fixe sur le code envoyé, et le code reçu.
 L'algorithme de cette seconde réduction consiste à ne pas calculer à nouveau l'analyse de vivacité pour le
 code nouvellement créé à chaque itération mais d'essayer, en une seule itération, de réutiliser l'analyse précédente.
 Pour résumer l'idée, voilà comment nous pourrions définir cette fois notre application de réduction,
-\[\Delta : A \times Stm \longrightarrow A \times Stm \]
-Cependant, si $P$ un programme, $\mu_P$ son analyse de vivacité (qui est un point fixe minimal) et $P' \subset P$ ce même programme
+\[\Delta : \mathcal{A} \times Stm \longrightarrow \mathcal{A} \times Stm \]
+Cependant, si l'on considère $P$ un programme, $\mu_P$ son analyse de vivacité (qui est un point fixe minimal) et $P' \subset P$ ce même programme
 réduit, alors il n'est pas possible d'utiliser l'analyse de vivacité de $P$ pour poursuivre la réduction, étant donné que
 $\mu_{P'} \sqsubseteq \mu_P$ et que, comme démontré plus haut, la recherche de point fixe est croissante monotone. Donc
-$\mu_P$ ne sera pas stable pour $P'$. On peut dès lors énoncer le théorème suivant;
+$\mu_P$ ne sera pas stable pour $P'$. Il s'agit donc de trouver un moyen de réduire suffisament la précédente analyse de vivacité.
+Définissons l'application $g : \mathcal{P} \times \mathcal{A} \longrightarrow \mathcal{A}$, décroissante monotone et qui agit comme
+un filtre, étant donné un programme, et une analyse de vivacité. De manière à filtrer convenablement l'analyse, en fonction d'un programme
+réduit, il faut ajouter de l'information à cette dernière. Il faut en effet qu'à chaque bloc $b$, il soit possible de connaître quel bloc sous-jacent
+a besoin des variables vivantes en $b$. Pour se faire, on va quelque peu modifier nos fonctions $gen$ et $kill$ qui fourniront cette fois une image dans
+$(\mathbb{N}, \mathcal{P}(V))$. 
+\\
+\\
+En ce qui concerne la comparaison de ces paires, elle ne sera pas lexicographique, en effet, l'on souhaite que seul le premier bloc rencontré requiérant
+une variable soit représenté. La comparaison ne se fera donc que sur la variable. Lors de la réduction, si ce même bloc est réduit alors la propagation se faisant vers le haut, la seul information nécessaire
+et le premier bloc rencontré. Une fois cela acquis, il est possible d'énoncer le théorème qui suit;
 \\
 \\
 \begin{theorem}
-	Soient $P$ un programme, $\mu_P \in \mathcal{A}$ son analyse de vivacité et $P' \subset P$ sa réduction. Alors il existe un morphisme
-	$g : \mathcal{P} \times \mathcal{A} \longrightarrow \mathcal{A}$ monotone décroissant, tel que 
-	\[\chi_{P'} = g(P', \mu_P),\]
-	est un pré-point fixe et $\chi_{P'} \sqsubseteq \mu_{P'}$.
+	Soient $P$ un programme, $\mu_P \in \mathcal{A}$ son analyse de vivacité et $P' \subset P$ sa réduction.
+	Alors,
+	\[S = g(P', \mu_P)\]
+	est un pré-point fixe et $S \sqsubseteq \mu_{P'}$ le point fixe minimale de $P'$.
 \end{theorem}
-\\
-\\
-\begin{proof}
-	On montre l'existence d'un tel morphisme en le construisant. Considérons $g$, un programme $P \in \mathcal{P}$ et $\mu_P$ son analyse
-	de vivacité. Donnons $P'$ sa réduction. Par convénience, on notera $L = P - P'$ l'ensemble des étiquettes
-	ayant été altérée lors de la dernière réduction. Pour simplifier notre filtre, on considère la différence réduite à une unique étiquette notée $l$.
-	On remarque que, seuls les blocs d'assignation sont pour le moment susceptibles d'être réduits. Ainsi, on cherche à propager la perte de vivacité pour les variables
-	dans l'ensemble $GEN[l]$. On note $A$ l'ensemble des variables utilisées sur ce bloc. Pour se faire, il s'agit de parcourir le graphe de flot de contrôle
-	à partir du bloc réduit jusqu'à la racine. À chaque bloc rencontré, le filtre agit sur le treilli de la sorte,
-	\\
-	\\
-	Si l'on traite $\liveout{c}$ alors on lui assigne le nouvel ensemble 
-	\[\liveout{c} - A \subseteq \liveout{c}\] 
-	On continue ensuite le parcours.
-	\\
-	Si l'on traite $\livein{c}$ alors on a deux cas, étant donné que c'est cette partie du bloc en question qui détermine si les variables
-	de notre ensemble $A$ sont aussi utilisées avant le bloc réduit.
-	\begin{enumerate}
-		\item Si $A \subseteq GEN[c]$ alors il n'y a plus besoin de poursuivre le parcours. En effet les variables en question sont utilisées, donc il n'est pas nécessaire
-		de continuer la propagation.\\
-		\item Sinon, on lui assigne le nouvel ensemble
-		\[\livein{c} - A \subseteq \livein{c}\]
-		Il est ensuite nécessaire de poursuivre le parcours, étant donnée qu'en $c$, les variables comprises dans $A$ sont toujours considérées comme mortes.
-	\end{enumerate}
-	Ainsi, on a bien $g$ un morphisme monotone décroissant, en effet, à chaque altération, le nouvel ensemble produit à l'entrée ou la sortie d'un bloc est toujours
-	inclu dans l'ensemble original.
-	\hfill $\blacksquare$
-\end{proof}
 \end{document}
