@@ -71,9 +71,8 @@ let rec iterative_reduction p stm analysis =
     each of their statement to be an independent program, hence
     None parameter when calling iterative_reduction.
 
-    It is useless to stabilize the pre-fixed point since at that point
-    we don't know about the whole program, i.e. we don't have access to the
-    whole control flow graph.
+    In the case of a while loop statement, it is necessary to
+    add it as a prefix of the statement block when calling iterative_reduction.
   *)
   | Ifte (t, s_1, s_2) ->
     Printf.printf "Reducing IFTE\n";
@@ -81,7 +80,7 @@ let rec iterative_reduction p stm analysis =
     let an_1, rs_1 = iterative_reduction None s_1 an_2 in
       (an_1, Ifte (t, rs_1, rs_2))
   | While (t, s) as w ->
-      let an, red = iterative_reduction p s analysis in
+      let an, red = iterative_reduction (Some w) s analysis in
       (an, While (t, red))
 
 let rec reduction stm lv_analysis =
