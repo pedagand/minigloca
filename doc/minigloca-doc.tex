@@ -495,17 +495,30 @@ et le premier bloc rencontré. Une fois cela acquis, il est possible d'énoncer 
 \\
 \\
 \begin{proof}
-	On note $\{l\} = P - P'$ l'ensemble des étiquettes liées aux blocs réduits. Dans notre cas, les block sont réduits un par un, donc on se restreindra au 
-	singleton. On considère $\mu_P$ le point fixe minimal sur le programme $P$.
+	On note $L=P - P'$ l'ensemble des étiquettes liées aux blocs réduits. Dans notre cas, les block sont réduits un par un, donc on se restreindra au 
+	singleton $L = \{l\}$. On considère $\mu_P$ le point fixe minimal sur le programme $P$.
 		Si pour
 	\[I_l[\mu] = \{u := (l, v) \in \mathcal{P}(\mathbb{N} \times V) \mid \forall k \in \mathbb{N}, u \in \livein{k} \cup \liveout{k}\}\]
-	on a $I_l[\mu_P] \ne \emptyset$, alors $\mu_P$ ne peut pas être un point fixe sur le programme $P'$ étant donné qu'il contient des références vers un bloc réduit.
+	on a $I_l[\mu_P] \ne \emptyset$, alors $\mu_P$ ne peut pas être un point fixe sur le programme $P'$ étant donné qu'il contient des références vers un bloc réduit
+	(donc qui n'existe plus dans $P'$).
 	Il s'agit donc de décroître le treilli. Considérons l'analyse de vivacité $S$ construite à partir de $\mu_P$ telle que $I_l[S] = \emptyset$. On a donc 
 	$S \sqsubset \mu_P$. 
 	\\
 	Montrons que $S$ est un pré-point fixe, et plus particulièrement, un pré-point fixe de $\mu_{P'}$ le point fixe minimal sur $P'$.
-	Revenons-en à la construction de $\livein{\cdot}$. On a que $\forall u \in I_l[\mu_P]$ et $\forall k \in \mathbb{N}$ alors $u \notin gen[k]$ et
-	$u \notin kill[k]$. En effet, ces derniers restent immuables au filtre étant donné qu'ils appartiennent à un bloc toujours vivant et que l'ensemble de
-	paires est construit avec leur étiquette. L'ensemble susceptible d'être altéré est donc plutôt $\liveout{k}$.
+	Il faut d'abord montrer que $S \sqsubseteq \mu_{P'}$. Comme $\mu_P$ est minimal, alors pour tout $k$, on a les $\livein{k}$ et $\liveout{k}$ qui sont également
+	"minimaux". Ainsi, réduire un bloc nous amène donc à $S \sqsubseteq \mu_{P'}$. 
+	Revenons-en à la construction de $\livein{\cdot}$. De par la réduction effectuée de bas en haut, on est assuré que le code suffixe au bloc d'étiquette $l$ n'est
+	pas mort. Cela nous évite en particulier de s'attarder sur $kill[l]$, étant donné que la variable en question n'est par hypothèse plus utilisée plus bas dans le
+	programme. Deux cas se présentent donc ; soit $v \in gen[l]$,
+	\begin{enumerate}
+		\item Si $v$ est vivante après le bloc d'étiquette $l$, alors l'analyse doit être stabilisée, en effet il faut propager les blocs successeurs à $l$ vers les
+		blocs prédecesseurs. Donc $S \sqsubset \mu_{P'}$.
+		\item Sinon, $v$ est morte à la sortie du bloc précédant le bloc d'étiquette $l$, donc il n'est nul besoin de stabiliser et $S = \mu_{P'}$.
+	\end{enumerate}
+	Penchons-nous sur $\liveout{l}$ désormais. De par sa définition, on a donc 
+	\[\forall l' \in pred(l), succ_{S}(l') = succ(l') \cup succ(l) \]
+	Donc la réduction du bloc en question ne change que le CFG et donc n'altère pas le reste de l'analyse de vivacité du programme.
+	\\
+	On a donc bien $S \sqsubseteq \mu_{P'}$.\hfill$\square$
 \end{proof}
 \end{document}
