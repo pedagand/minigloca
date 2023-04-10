@@ -26,7 +26,7 @@ let rec skip_reduction stm =
       let opt_s = skip_reduction s in
       match opt_s with Some o_s -> Some (While (t, o_s)) | _ -> None)
 
-let rec iterative_reduction p stm analysis =
+let rec iterative_reduction prefix stm suffix analysis =
   let lin, lout = analysis in
   match stm with
   | Assign t as assign ->
@@ -35,32 +35,25 @@ let rec iterative_reduction p stm analysis =
         (analysis, assign)
       else (dataflow_filter t.label analysis, Syntax.skip ~l:t.label ())
   (*
-    Concerning the sequence, it is needed to take consideration of a parent
-    program. In each part, we stabilize the pre-fixed point found.
-  *)
-  | Seq (s_1, s_2) when p = None ->
-      let an_2, rs_2 = iterative_reduction (Some s_1) s_2 analysis in
-      let p' = Seq (s_1, rs_2) in
-      pprint_dataflow an_2;
-      let an_1, rs_1 =
-        iterative_reduction p s_1 an_2
-      in
-      (incr_dataflow (Seq (rs_1, rs_2)) an_1 dataflow_wl, Seq (rs_1, rs_2))
-  (*
-    The sequence in the case of a pre program.
+    Concerning the sequence, it is needed to take consideration of a prefix
+    and a suffix program. In each part, we stabilize the pre-fixed point found.
   *)
   | Seq (s_1, s_2) ->
-      let sp = Option.value p ~default:(Syntax.skip ()) in
-      let an_2, rs_2 =
-        iterative_reduction (Some (Seq (sp, s_1))) s_2 analysis
+      let seq_prefix =
+        match prefix with None -> Some s_1 | Some v -> Some (Seq (v, s_1))
       in
-      let p' = Seq (sp, Seq (s_1, rs_2)) in
+      let an_2, rs_2 = iterative_reduction seq_prefix s_2 suffix analysis in
+      let seq_suffix =
+        match suffix with None -> rs_2 | Some v -> Seq (rs_2, v)
+      in
       pprint_dataflow an_2;
-      let an_1, rs_1 =
-        iterative_reduction p s_1 an_2
+      let an_1, rs_1 = iterative_reduction prefix s_1 (Some seq_suffix) an_2 in
+      let p' =
+        match prefix with
+        | None -> Seq (rs_1, seq_suffix)
+        | Some v -> Seq (v, Seq (rs_1, seq_suffix))
       in
-      ( incr_dataflow (Seq (sp, Seq (rs_1, rs_2))) an_1 dataflow_wl,
-        Seq (rs_1, rs_2) )
+      (incr_dataflow p' an_1 dataflow_wl, Seq (rs_1, rs_2))
   (*
     In case of a Skip statement, we just need to return it with
     the current analysis.     
@@ -75,12 +68,15 @@ let rec iterative_reduction p stm analysis =
     add it as a prefix of the statement block when calling iterative_reduction.
   *)
   | Ifte (t, s_1, s_2) ->
-    Printf.printf "Reducing IFTE\n";
-    let an_2, rs_2 = iterative_reduction None s_2 analysis in
-    let an_1, rs_1 = iterative_reduction None s_1 an_2 in
+      Printf.printf "Reducing IFTE\n";
+      let an_2, rs_2 = iterative_reduction prefix s_2 suffix analysis in
+      let an_1, rs_1 = iterative_reduction prefix s_1 suffix an_2 in
       (an_1, Ifte (t, rs_1, rs_2))
   | While (t, s) as w ->
-      let an, red = iterative_reduction (Some w) s analysis in
+      let while_prefix =
+        match prefix with None -> Some w | Some v -> Some (Seq (v, w))
+      in
+      let an, red = iterative_reduction while_prefix s suffix analysis in
       (an, While (t, red))
 
 let rec reduction stm lv_analysis =
@@ -106,15 +102,10 @@ let rec reduction stm lv_analysis =
 let rec deadcode_elimination stm =
   let _, lv_out = dataflow stm dataflow_nv in
   let reduced = reduction stm lv_out in
-  (* let opt_reduced = skip_reduction reduced in
-     match opt_reduced with
-     | Some r when not (equal_s stm r) -> deadcode_elimination r
-     | _ -> reduced *)
   if equal_s stm reduced then reduced else deadcode_elimination reduced
 
 let incr_deadcode_elimination stm =
   let analysis = dataflow stm dataflow_nv in
   pprint_dataflow analysis;
-  let _, reduced = iterative_reduction None stm analysis in
-  (* skip_reduction reduced *)
+  let _, reduced = iterative_reduction None stm None analysis in
   reduced
