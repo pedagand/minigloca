@@ -378,11 +378,12 @@ soit plus gros et la finitude de l'ensemble des variables assure qu'il ne pourra
 du théorème du point fixe de Kleene qui s'énnonce comme suit,
 \newline
 \newline
-\theorem{
+\begin{theorem}	
 	Soit $(L, \sqsubseteq)$ un ordre partiellement ordonné, avec un plus petit élément  $\perp$ et soit
 	une application $f : L \longrightarrow L$ monotone. Alors il existe un point fixe minimal qui est le suprémum de la suite,
 	\[\perp \sqsubseteq f(\perp) \sqsubseteq f^2(\perp) \sqsubseteq \cdots \sqsubseteq f^k(\perp) \sqsubseteq \cdots\]
-}
+\end{theorem}
+
 \begin{algorithm}
 	\caption{Itération du point fixe}
 	\begin{algorithmic}
@@ -408,7 +409,7 @@ celle-ci ne fait que croître vers $\top$.
 Concernant l'implémentation, il peut être intéressant de définir $live$ comme une structure binaire de taille au
 moins $m$ bits avec $m = \#V$.
 Une amélioration peut être simplement faite sur l'algorithme décrit ci-dessus. Effectivement, on peut remarquer que,
-à chaque modification de $LIVE_{out}[l]$ seul les blocs successeurs seront susceptibles de s'altérer. Donc
+à chaque modification de $LIVE_{out}[l]$ seuls les blocs successeurs seront susceptibles de s'altérer. Donc
 au lieu d'itérer à nouveau sur l'ensemble des blocs, itérer uniquement sur les blocs successeurs au dernier
 bloc altéré. Cette approche a pour nom naturel de \textit{worklist}.
 \\
@@ -417,5 +418,107 @@ La correction de l'algorithme est la suivante, elle repose en partie sur ce qui 
 En effet, à chaque itération, dans laquelle l'on vérifie si le point fixe a ou non été atteint, on met à jour les
 tableaux $live_{in}[l]$ et $live_{out}[l]$ pour tout bloc. Mais comme pour ce faire, on utilise deux fonctions monotones croissantes et qu'on suppose
 l'ensemble de nos variables fini, on est assuré de trouver le plus petit point fixe existant (par le théorème de Kleene) et ainsi de terminer l'algorithme.
+\\
+\\
+Dans cette étude, nous travaillerons avec les deux algorithmes évoqués pour réaliser les tests unitaires. Ci-dessous, un aperçu du fonctionnement
+de l'algorithme par worklist.
 
+\begin{algorithm}
+	\caption{Itération du point fixe (worklist)}
+	\begin{algorithmic}
+		\State {Soit $S$ le programme}
+		\State {Soit $L$ l'ensemble des étiquettes de $\mathcal{B}$}
+		\State $\mathcal{Q} \leftarrow L$ une queue des étiquettes
+		\For{$l \in L$}
+		\State $live_{in}[l] \leftarrow \emptyset$
+		\State $live_{out}[l] \leftarrow \emptyset$
+		\EndFor
+		\While{$\#\mathcal{Q} > 0$}
+		\State $q \leftarrow \mathcal{Q}$.pop
+		\State $live_{out}[q] \leftarrow \bigcup\limits_{p\in succ(q)} live_{in}[p]$
+		\State $live_{in}[q] \leftarrow gen[q] \cup (live_{out}[q] - kill[q])$
+		\EndWhile
+	\end{algorithmic}
+\end{algorithm}
+
+\section{Génération}
+Dans l'optique de vérification de la robustesse de nos différentes analyses, il peut être bon de réaliser
+des tests unitaires sur chacune d'elles. Pour cela on ne se restreindra pas aux tests conçus pas nous-même
+mais on essayera aussi de trouver tous les cas de figure par la manière forte. Un générateur de code complètement
+arbitraire est alors une bonne solution pour réaliser de tels tests. Dans notre cas, il permettra de mettre en
+lumière défaut sur l'algorithme de worklist.
+\\
+Ce générateur de code est ajusté par un paramètre qu'est la quantité de variables assignées du programme. On
+cherche également à ce que le code généré soit le plus proche possible de celui qu'aurait pû fournir un humain.
+Dans notre syntaxe, il suffit pour le moment de donner une certaine répartition lors de la création des déclarations,
+en donnant plus de chance à l'assignation d'apparaître, que des blocs Ifte ou Whiledo par exemple.
+
+\section{Élimination de code mort}
+Cette analyse permet une première optimisation qu'est l'élimination de code mort. Elle consiste, en pré-compilation,
+à générer un nouveau code à partir du code initial, dans lequel le code dit mort n'est plus présent.
+On définira ici le code mort comme un ensemble de blocs d'un programme qui ne seront jamais utilisés.
+
+\subsection{Réduction naïve}
+Cette optimisation peut en premier lieu être abordée de manière naïve. On notera $A$ l'analyse de flot de donnée.
+Considérons $\Delta$ la fonction d'élimination du code mort définie comme:
+\[\Delta : \mathcal{A} \times Stm \longrightarrow Stm\]
+qui, à partir du code d'un programme et d'une analyse de flot de donnée, produit un nouveau code. $\Delta$ est itérée
+jusqu'à atteindre un point fixe sur le code envoyé, et le code reçu.	
+
+\subsection{Incrémentalisation de la réduction}
+L'algorithme de cette seconde réduction consiste à ne pas calculer à nouveau l'analyse de vivacité pour le
+code nouvellement créé à chaque itération mais d'essayer, en une seule itération, de réutiliser l'analyse précédente.
+Pour résumer l'idée, voilà comment nous pourrions définir cette fois notre application de réduction,
+\[\Delta : \mathcal{A} \times Stm \longrightarrow \mathcal{A} \times Stm \]
+Cependant, si l'on considère $P$ un programme, $\mu_P$ son analyse de vivacité (qui est un point fixe minimal) et $P' \subset P$ ce même programme
+réduit, alors il n'est pas possible d'utiliser l'analyse de vivacité de $P$ pour poursuivre la réduction, étant donné que
+$\mu_{P'} \sqsubseteq \mu_P$ et que, comme démontré plus haut, la recherche de point fixe est croissante monotone. Donc
+$\mu_P$ ne sera pas stable pour $P'$. Il s'agit donc de trouver un moyen de réduire suffisament la précédente analyse de vivacité.
+Définissons l'application $g : \mathcal{P} \times \mathcal{A} \longrightarrow \mathcal{A}$, décroissante monotone et qui agit comme
+un filtre, étant donné un programme, et une analyse de vivacité. De manière à filtrer convenablement l'analyse, en fonction d'un programme
+réduit, il faut ajouter de l'information à cette dernière. Il faut en effet qu'à chaque bloc $b$, il soit possible de connaître quel bloc sous-jacent
+a besoin des variables vivantes en $b$. Pour se faire, on va quelque peu modifier nos fonctions $gen$ et $kill$ qui fourniront cette fois une image dans
+$\mathcal{P}(\mathbb{N} \times V)$. 
+\\
+\\
+En ce qui concerne la comparaison de ces paires, elle ne sera pas lexicographique, en effet, l'on souhaite que seul le premier bloc rencontré requiérant
+une variable soit représenté. La comparaison ne se fera donc que sur la variable. Lors de la réduction, si ce même bloc est réduit alors la propagation se faisant vers le haut, la seul information nécessaire
+et le premier bloc rencontré. Une fois cela acquis, il est possible d'énoncer le théorème qui suit;
+\\
+\\
+\begin{theorem}
+	Soient $P$ un programme, $\mu_P \in \mathcal{A}$ son analyse de vivacité et $P' \subset P$ sa réduction.
+	Alors,
+	\[S = g(P', \mu_P)\]
+	est un pré-point fixe et $S \sqsubseteq \mu_{P'}$ le point fixe minimale de $P'$.
+\end{theorem}
+\\
+\\
+\begin{proof}
+	On note $L=P - P'$ l'ensemble des étiquettes liées aux blocs réduits. Dans notre cas, les block sont réduits un par un, donc on se restreindra au 
+	singleton $L = \{l\}$. On considère $\mu_P$ le point fixe minimal sur le programme $P$.
+		Si pour
+	\[I_l[\mu] = \{u := (l, v) \in \mathcal{P}(\mathbb{N} \times V) \mid \forall k \in \mathbb{N}, u \in \livein{k} \cup \liveout{k}\}\]
+	on a $I_l[\mu_P] \ne \emptyset$, alors $\mu_P$ ne peut pas être un point fixe sur le programme $P'$ étant donné qu'il contient des références vers un bloc réduit
+	(donc qui n'existe plus dans $P'$).
+	Il s'agit donc de décroître le treilli. Considérons l'analyse de vivacité $S$ construite à partir de $\mu_P$ telle que $I_l[S] = \emptyset$. On a donc 
+	$S \sqsubset \mu_P$. 
+	\\
+	Montrons que $S$ est un pré-point fixe, et plus particulièrement, un pré-point fixe de $\mu_{P'}$ le point fixe minimal sur $P'$.
+	Il faut d'abord montrer que $S \sqsubseteq \mu_{P'}$. Comme $\mu_P$ est minimal, alors pour tout $k$, on a les $\livein{k}$ et $\liveout{k}$ qui sont également
+	"minimaux". Ainsi, réduire un bloc nous amène donc à $S \sqsubseteq \mu_{P'}$. 
+	Revenons-en à la construction de $\livein{\cdot}$. De par la réduction effectuée de bas en haut, on est assuré que le code suffixe au bloc d'étiquette $l$ n'est
+	pas mort. Cela nous évite en particulier de s'attarder sur $kill[l]$, étant donné que la variable en question n'est par hypothèse plus utilisée plus bas dans le
+	programme. Deux cas se présentent donc ; soit $v \in gen[l]$,
+	\begin{enumerate}
+		\item Si $v$ est vivante après le bloc d'étiquette $l$, alors l'analyse doit être stabilisée, en effet il faut propager les blocs successeurs à $l$ vers les
+		blocs prédecesseurs. Donc $S \sqsubset \mu_{P'}$.
+		\item Sinon, $v$ est morte à la sortie du bloc précédant le bloc d'étiquette $l$, donc il n'est nul besoin de stabiliser et $S = \mu_{P'}$.
+	\end{enumerate}
+	Penchons-nous sur $\liveout{l}$ désormais. De par sa définition, on a donc 
+	\[\forall l' \in pred(l), succ_{S}(l') = succ(l') \cup succ(l) \]
+	Donc la réduction du bloc en question ne change que le CFG et donc n'altère pas le reste de l'analyse de vivacité du programme.
+	\\
+	On a donc bien $S \sqsubseteq \mu_{P'}$.\hfill$\square$
+\end{proof}
 \end{document}

@@ -15,15 +15,16 @@ let rec gen_a vars i depth =
 
 let rec gen_b vars i depth =
   let bound = 7 in
+  let nd = depth - 1 in
   let op = Random.int bound in
   match op with
   | 0 -> True
   | 1 -> False
-  | 2 -> Lt (gen_a vars i depth, gen_a vars i depth)
-  | 3 -> Eq (gen_a vars i depth, gen_a vars i depth)
-  | 4 -> And (gen_b vars i 1, gen_b vars i 1)
-  | 5 -> Or (gen_b vars i 1, gen_b vars i 1)
-  | _ -> Not (gen_b vars i 1)
+  | 2 -> Lt (gen_a vars i nd, gen_a vars i nd)
+  | 3 -> Eq (gen_a vars i nd, gen_a vars i nd)
+  | 4 -> And (gen_b vars i nd, gen_b vars i nd)
+  | 5 -> Or (gen_b vars i nd, gen_b vars i nd)
+  | _ -> Not (gen_b vars i nd)
 
 let gen_nomenclature x = string_of_int x
 
