@@ -5,7 +5,7 @@ open Label
 module LabelVarPair = struct
   type t = label * string
 
-  let compare (_, s_1) (_, s_2) = String.compare s_1 s_2
+  let compare b a = Stdlib.compare a b
 end
 
 module Vars = Set.Make (LabelVarPair)
