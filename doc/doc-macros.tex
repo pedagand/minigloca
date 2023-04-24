@@ -5,10 +5,6 @@
         }
 }
 
-\newcommand{\definition}[1] {
-    \textbf{\textit{Définition --\space}}{#1}
-}
-
 % \newcommand{\theorem}[1] {
 %     \textbf{\textit{Théorème --\space}}{#1}
 % }
@@ -85,7 +81,8 @@
 
 \newcommand{\filterset}{I_{\mathcal{L}}}
 
+\newenvironment{definition}{\textbf{\textit{Définition --}}}{\\}
 \newenvironment{notation}{\textbf{\textit{Notation --}}}{\\}
-\newenvironment{theorem}{\textbf{\textit{Théorème --\space}}}{\\}
+\newenvironment{theorem}{\textbf{\textit{Théorème --\space}}}{}
 \newenvironment{lemma}{\textbf{\textit{Lemme --\space}}}{\\}
-\newenvironment{proof}{\textbf{\textit{Démonstration --\space}}}{\\}
+\newenvironment{proof}{\textbf{\textit{Démonstration --\space}}}{\\\null\hfill$\square$\\}
