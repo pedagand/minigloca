@@ -29,6 +29,10 @@
     \text{while }{#1}\text{ do }{#2}
 }
 
+\newcommand{\sreturn}[1] {
+    \text{return }{#1}
+}
+
 \newcommand{\intrfun}[2] {
 [\![{#1}]\!]^{#2}
 }
@@ -83,6 +87,7 @@
 
 \newenvironment{definition}{\textbf{\textit{Définition --}}}{\\}
 \newenvironment{notation}{\textbf{\\\textit{Notation --}}}{\\}
-\newenvironment{theorem}{\textbf{\textit{Théorème --\space}}}{}
-\newenvironment{lemma}{\textbf{\textit{Lemme --\space}}}{\\}
-\newenvironment{proof}{\textbf{\textit{Démonstration --\space}}}{\\\null\hfill$\square$\\}
+\newenvironment{theorem}{\textbf{\textit{Théorème --}}}{}
+\newenvironment{example}{\textbf{\textit{Exemple.}}\\}{}
+\newenvironment{lemma}{\textbf{\textit{Lemme --}}}{\\}
+\newenvironment{proof}{\textbf{\textit{Démonstration --}}}{\\\null\hfill$\square$\\}
