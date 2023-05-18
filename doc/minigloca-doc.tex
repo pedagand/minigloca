@@ -575,7 +575,7 @@ On obtient donc l'analyse de vivacité suivante, en appliquant l'un des deux alg
 	2 & b := a & $\{a\}$ & $\{a, b\}$\\
 	3 & while a < 100 do & $\{a, b\}$ & $\{a, b\}$\\
 	4 & if a = 2 then & $\{a, b\}$ & $\{a, b\}$\\
-	5 & c := a & $\{a\}$ & $\{b, c\}$\\
+	5 & c := a & $\{a, b\}$ & $\{b, c\}$\\
 	6 & c := 2 * a & $\{a, b\}$ & $\{b, c\}$\\
 	7 & d := b & $\{b, c\}$ & $\{b, c\}$\\
 	8 & a := c + 1 & $\{b, c\}$ & $\{a, b, c\}$\\
@@ -875,7 +875,7 @@ On trouve la première analyse de vivacité, à partir de $\bot$ sur le treillis
 	4 & while a < 100 do & $\{a, b\}$ & $\{a, b\}$\\
 	5 & if a = 2 then & $\{a, b\}$ & $\{a, b\}$\\
 	6 & c := a & $\{a, b\}$ & $\{b, c\}$\\
-	7 & d := b & $\{a, b\}$ & $\{b, c\}$\\
+	7 & d := b & $\{b, c\}$ & $\{b, c\}$\\
 	8 & c := 2 * a & $\{a, b\}$ & $\{b, c\}$\\
 	9 & e := b & $\{b, c\}$ & $\{b, c\}$\\
 	10 & a := c + 1 & $\{b, c\}$ & $\{a, b, c\}$\\
