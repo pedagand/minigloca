@@ -1,4 +1,4 @@
-\documentclass[a4paper, 12pt]{article}
+\documentclass[a4paper, 10pt]{article}
 
 \usepackage[francais]{babel}
 \usepackage[T1]{fontenc}
@@ -10,11 +10,14 @@
 \usepackage{algorithm}
 \usepackage{algpseudocode}
 \usepackage{color}
-\usepackage{mathtools} % for 'dcases*' env.
+\usepackage{mathtools}
+\usepackage{caption}
 
 \definecolor{dkgreen}{rgb}{0,0.6,0}
 \definecolor{gray}{rgb}{0.5,0.5,0.5}
 \definecolor{mauve}{rgb}{0.58,0,0.82}
+
+\floatname{algorithm}{Algorithme}
 
 \lstset{frame=tb,
 	language=caml,
@@ -40,292 +43,336 @@
 \tableofcontents
 \newpage
 
+\section{Introduction}
+Le projet Gloca tient pour but initial d'offrir au programmeur un plus ample contrôle sur l'exécution de son programme.
+Il s'agit de remettre entre ses mains les optimisations qui sont aujourd'hui largement prises en charge par les compilateurs
+et parfois, au dépend des performances. L'optimisation en compilation repose en partie, depuis les années 1960, sur l'analyse statique de code. Cette
+dernière permet en quelque sorte de prévoir les différents comportements qui pourraient être émis par un programme. À partir de là, le
+compilateur doit agir en conséquence et optimise ainsi le code assembleur produit. Chaque analyse a sa propriété particulière à respecter.
+Par exemple, si le programme contient du code mort, c'est-à-dire du code qui ne sera jamais appelé quelque soit la manière avec laquelle
+il s'exécute, il n'est pas besoin de le traiter à la compilation. Si le programme doit recalculer une même expression plusieurs fois, au sein 
+d'une boucle par exemple, alors la calculer une seule fois, la stocker en mémoire, puis appeler le résultat obtenu quand nécessaire permet 
+d'économiser énormément d'opérations.
+\\
+\\
+Cependant, il est des optimisations que le compilateur est incapable de réaliser car il existe des cas qu'il ne peut pas prévoir. Certaines
+optimisations peuvent aussi parfois ne pas servir du tout et au contraire ralentir le programme. Ces cas de figure peuvent
+s'avérer problématique lorsque qu'on attend d'un programme qu'il réalise de gros calculs en tenant compte d'importantes contraintes, typiquement au sein
+de systèmes embarqués. Ce projet consistera donc à formaliser un langage impératif expérimental, sur lequel l'on développera une première analyse statique de deux manières
+différentes. Cela permettra ensuite d'appliquer une généralisation et de formuler une extension de ce langage, laquelle agira à la pré-compilation comme un meta-langage.
+Pour ce faire, on aura besoin d'établir certaines relations entre les prédicats qui composeront cette extension du langage et les
+analyses, qui seront appliquées en conséquence. Ces relations permettront enfin de donner un cadre efficace à l'utilisation des prédicats par le programmeur.
+\\
+\\
+Donc, est-il possible de formaliser un langage qui puisse, se réécrire lors de la pré-compilation en fonction de prédicats, lesquels invoqueront certaines
+analyses statiques sur le programme ? Comment ces analyses statiques se définissent-elles à partir des prédicats ? Ces analyses pourront-elles, en outre,
+se calculer de manière incrémentale, c'est-à-dire en réutilisant leur dernier résultat ?
+
 \section{Un langage impératif simple}
 Pour commencer, définissons une syntaxe abstraite minimale que nous utiliserons tout le long de cette étude.
 Cette syntaxe se composera de trois blocs fondamentaux que sont les expressions arithmétiques, les expressions
-booléennes ainsi que les déclarations. Nous n'incluons pas pour le moment la déclaration de routines au sein de cette syntaxe.
+booléennes ainsi que les déclarations. Nous ne considèrerons pas pour le moment la définition de routines au sein de cette syntaxe.
 
 \subsection{Expressions arithmétiques}
 Les expressions arithmétiques sont définies sur l'ensemble des entiers relatifs. On se donne les opérateurs
 de l'addition, de la soustraction ainsi que de la multiplication. À ces opérateurs l'on pourra appliquer des
 entiers ainsi que des identifiants de variables.
 
-% \begin{dtype}{Int}
-%   \inlinekind{n}\with{n\in\mathbb{Z}}
-% \end{dtype}
-% \begin{dtype}{Id}
-%   \inlinekind{x}
-%   \kind{y}
-%   \kind{z}
-%   \kind{\ldots}
-% \end{dtype}
-% \begin{dtype}{Exp_a}
-%   \inlinekind{Int}
-%   \kind{Id}
-%   \kind{op_A (a_1, a_2)}
-%   \with{op_A \in\{+, -, \times\}}
-% \end{dtype}
-
 \begin{align*}
-  Int   & \rightarrow n                               & n \in \mathbb{Z}          \\
-  Id    & \rightarrow x \mid y \mid z \mid \cdots                                 \\
-  Exp_a & \rightarrow Int \mid Id \mid op_A(a_1, a_2) & op_A \in \{+, -, \times\}
+  Int   & ::= n                               & n \in \mathbb{Z}          \\
+  Id    & ::= x	  							  & x \in \mathbb{V}          \\
+  \arithexp & ::= Int \mid Id \mid op_A(a_1, a_2) & op_A \in \{+, -, \times\}
 \end{align*}
-L'identifiant d'une variable est, de manière générale, une chaîne de caractères.
-
+\captionof{figure}{Expression arithmétique}
+$\mathbb{V}$ décrira désormais l'ensemble des identifiants de variables affectées dans nos programmes. 
 \subsection{Expressions booléennes}
 Les expressions booléennes nous permettent d'introduire la comparaison entre deux expressions arithmétiques,
 ainsi que les opérateurs booléens sur les expressions booléennes.
 
-\begin{dtype}{Exp_b}
+\begin{dtype}{\boolexp}
   \inlinekind{\textbf{true}}
   \kind{\textbf{false}}\\
   \akind{op_R (a_1, a_2)}\with{op_R\in\{<, =\}}
   \akind{op_B (b_1, b_2)}\with{op_B\in\{\wedge, \vee\}}
   \akind{\neg{b}}
 \end{dtype}
+\captionof{figure}{Expression booléenne}
 
 \subsection{Déclarations}
-Les déclarations sont définies de la manière suivante:
+Les déclarations nous permettent de donner forme à notre langage en définissant la séquence de deux instructions ainsi
+que les gardes booléennes, sur une condition ou une boucle. On pose la déclaration de la manière suivante,
 
 \begin{dtype}{Stm}
-  \inlinekind{\sassign{Id}{Exp_a}}\\
+  \inlinekind{\sassign{x}{a}}\\
   \akind{\sseq{s_1}{s_2}}\\
-  \akind{ }\\
+  \akind{\sskip}\\
   \akind{\sifthenelse{b}{s_1}{s_2}}\\
-  \akind{\swhiledo{b}{s}}
+  \akind{\swhiledo{b}{s}}\\
+  \akind{\sreturn{a}}
 \end{dtype}
-
-\subsection{Exemple}
-Voici un premier exemple sur ce langage
-\begin{lstlisting}
-a := 1;
-b := 20;
-
-if a = 3 then
-	c := 4
-else
-	c := 6
-endif;
-
-while b < 100 do
-	b := b + 1
-done
-\end{lstlisting}
+La déclaration return servira pour le moment à simuler l'appelle à une routine, ce qui permettra de donner plus de sens aux applications de nos analyses.
+Dans le reste de cette étude, on parlera également de déclaration en désignant un programme étant donné que les analyses statiques
+n'ont pas besoin d'évaluer la déclaration pour se construire. On notera aussi que la routine peut, pour le moment, être
+simplement vue comme la déclaration d'une boucle. Cela sera utile lors des travaux sur la réduction du code mort.
+\\
+\\
+\begin{example}
+	Voici un premier exemple sur ce langage
+	\begin{lstlisting}[tabsize=2]
+	a := 1;
+	b := 20;
+	if a = 3 then
+		c := 4
+	else
+		c := 6
+	endif;
+	while b < 100 do
+		a := b + 1
+	done;
+	return c
+	\end{lstlisting}
+\end{example}
+L'implémentation de tout ce qui est spécifié dans ce document, est écrite en OCaml et est disponible sur le dépôt Git.
 
 \subsection{Arbre de syntaxe abstraite}
-Ce modèle de représentation permet de construire un arbre de syntaxe abstraite (AST) du programme en question,
-cette structure étant un moyen pratique de le représenter. Cela nous servira particulièrement lors des différentes
-analyses qui seront effectuées, et notamment l'analyse par flot de contrôle. Cette dernière ne requièrant pas
-la connaissance de l'ordre d'exécution du programme, les AST sont tout-à-fait adaptés!
-
-\begin{center}\input{ast.fig}\end{center}
-
-\subsection{Graphe de flot de contrôle}
-Un graphe de flot de contrôle est un graphe orienté dont les noeuds représentent une déclaration et les arcs un
-flot de contrôle. Chaque noeud est une unique opération de notre programme. Dans notre cas, le graphe de flot de
-contrôle aura un seul point d'entrée et un seul point de sortie. Ils sont considérés comme des noeuds ``sans opération''.
-De manière à construire ce graphe, on peut assigner à chaques déclarations procurant une unique exécution, un label.
-Dans notre cas, ces déclarations sont l'assignation, la condition ainsi que la boucle. En voici quelques exemples:
-
-\begin{center}\input{cfg.fig}\end{center}
-
-\subsection{Implémentation}
-Détails sur l'implémentation.
+De manière à construire nos programmes à partir de ce qui a été précédemment énoncé, il est nécessaire d'introduire 
+l'arbre de syntaxe abstraite. Ce modèle de représentation permet de parcourir la déclaration et d'en extraire n'importe
+quelle fonctions (dans notre cas les différents opérateurs arithmétiques, booléens, ou d'affectation). 
+Cela nous servira particulièrement lors des différentes analyses qui seront effectuées, et notamment l'analyse par flot de contrôle. 
+Cette dernière ne requièrant pas la connaissance de l'ordre d'exécution de la déclaration, les AST sont tout-à-fait adaptés.
+Voici un exemple d'AST sur notre langage.
 
 \section{Interpréteur et sémantique}
-Dans ce chapitre, on s'atèle à décrire l'interpréteur ainsi que la sémantique sur notre petit langage impératif. 
-Dans ce cadre là, on définit l'état du programme par une bijection entre l'identifiant des variables et leur valeur, 
-ici un entier:
+Dans cette section, on s'atèle à décrire l'interpréteur ainsi que la sémantique sur notre petit langage impératif. Rappelons que
+$\mathbb{V}$ est l'ensemble des variables affectées dans un programme.
+Dans ce cadre là, on définit l'état d'un programme (sur la pile) par une application entre les identifiants de variables et leurs valeurs, 
+dans notre cas, des entiers relatifs,
 \[\sigma : \mathbb{V} \longrightarrow \mathbb{Z}\]
-On introduire aussi la bijection $\mu_B$,
-\[\mu_B : \mathcal{B} \longrightarrow \mathbb{B}\]
-où $\mathcal{B} = \{\textbf{true}$, \textbf{false}\} les valeurs booléennes de notre langage et $\mathbb{B} = \{\top, \bot\}$ 
-l'ensemble des valeurs booléennes natives à OCaml. Pour la suite, on considèrera l'ensemble des états $\mathcal{S} = \mathbb{Z}^\mathbb{V}$.
-Les états décriront l'évolution de l'exécution du programme.
+Pour la suite, on considèrera l'ensemble des états $\mathcal{S} = \mathbb{Z}^\mathbb{V}$.
+Ces derniers décriront l'évolution de l'exécution du programme et nous permettront de formaliser un interpréteur.
 
 \subsection{Interpréteur}
-Sur les expressions arithmétiques, définies dans le chapitre 1, on se donne la fonction suivante:
+Pour le moment, il n'est pas nécessaire d'implémenter un compilateur pour notre langage, un interpréteur suffira.
+Celui-ci servira notamment à valider les tests unitaires lorsque les premières analyses statiques seront appliquées
+à nos programmes.
+Sur les expressions arithmétiques, définies dans le section précédente, on pose l'application suivante,
 \begin{align*}
-	\intrfun{Exp_a}{A}:\mathcal{S}&\longrightarrow\mathbb{Z}\\
-	\intrfun{Id}{A}\sigma&\longmapsto\sigma(Id)\\
-	\intrfun{a_1+a_2}{A}\sigma&\longmapsto\intr{a_1}{A}{\sigma}\text{ }\hat{+}\text{ }\intr{a_2}{A}{\sigma}\\
+	\intrfun{\arithexp}{A}:\mathcal{S}&\longrightarrow\mathbb{Z}\\
+	\intrfun{n}{A}:\sigma&\longmapsto n\\
+	\intrfun{x}{A}:\sigma&\longmapsto\sigma(x)\\
+	\intrfun{op_A(a_1, a_2)}{A}:\sigma&\longmapsto\hat{op}_A(\intr{a_1}{A}{\sigma}\text{, }\intr{a_2}{A}{\sigma})\\
 \end{align*}
-Cette dernière est aussi définie respectivement aux autres opérateurs arithmétiques, introduits dans le chapitre précédent.
-De la même manière, on définit la fonction qui suit sur les expressions booléennes:
+On définit $\mathbb{B} = \{0, 1\}$. De la même manière, on définit l'application qui suit sur les expressions booléennes,
 \begin{align*}
-	\intrfun{Exp_b}{B}:\mathcal{S}&\longrightarrow\mathbb{B}\\	
-	\intrfun{b}{B}\sigma&\longmapsto\mu(b)\\
-	\intrfun{a_1=a_2}{B}\sigma &\longmapsto \intr{a_1}{A}{\sigma}\text{ }\hat{=}\text{ }\intr{a_2}{A}{\sigma}\\
-	\intrfun{b_1\wedge b_2}{B}\sigma&\longmapsto \intr{b_1}{B}{\sigma}\text{ }\hat{\wedge}\text{ }\intr{b_2}{B}{\sigma}\\
-	\intrfun{\neg b}{B}\sigma&\longmapsto\hat{\neg}\intr{b}{B}{\sigma}
+	\intrfun{\boolexp}{B}:\mathcal{S}&\longrightarrow\mathbb{B}\\	
+	\intrfun{\textbf{true}}{B}:\sigma&\longmapsto\top\\
+	\intrfun{\textbf{false}}{B}:\sigma&\longmapsto\bot\\
+	\intrfun{op_R(a_1, a_2)}{B}:\sigma &\longmapsto \hat{op}_R(\intr{a_1}{A}{\sigma}\text{, }\intr{a_2}{A}{\sigma})\\
+	\intrfun{op_B(b_1, b_2)}{B}:\sigma&\longmapsto \hat{op}_B(\intr{b_1}{B}{\sigma}\text{, }\intr{b_2}{B}{\sigma})\\
+	\intrfun{\neg b}{B}:\sigma&\longmapsto\hat{\neg}\intr{b}{B}{\sigma}
 \end{align*}
 Les opérateurs de la forme $\hat{op}$ représentent les opérateurs natifs à OCaml.
 
 \subsection{Sémantique}
 Maintenant que nous avons correctement défini l'interpréteur, il est possible 
-de construire la sémantique du langage. Il est ensuite possible de développer 
+de construire la sémantique du langage. Cela permet également de développer 
 un ensemble de règles logiques. La syntaxe de la déclaration des règles,
 prenant en compte nos état et déclaration, sera donc de la forme suivante,
 
-\[Stm, \mathcal{S} \longrightarrow Stm', \mathcal{S}'\]
+\[s, \Sigma \longrightarrow s', \Sigma'\]
 \\
-où $Stm$ est la première déclaration, $Stm'$ celle qui suit après son exécution, 
-$\mathcal{S}$ l'état initial et $\mathcal{S}'$  l'état successeur. Commençons 
+où $s$ est la première déclaration, $s'$ celle qui suit après son exécution, 
+$\Sigma$ l'état initial et $\Sigma'$  l'état successeur. Commençons 
 par la déclaration vide,
 
 \srule{ }{\semanticd{\sskip}{\sigma}{\emptyset}{\sigma}}
 
-Poursuivons avec la déclaration de l'assignation,
-\srule{ }{\semanticd{\sassign{Id}{a}}{\sigma}{\emptyset}{\sigma'[Id\longmapsto\intr{a}{A}{\sigma}]}}
+Poursuivons avec la déclaration de l'affectation,
+\srule{ }{\semanticd{\sassign{x}{a}}{\sigma}{\emptyset}{\sigma'[x\longmapsto\intr{a}{A}{\sigma}]}}
 Ici, le nouvel état $\sigma'$ lie l'identifiant de la variable assignée, à la 
 valeur de l'expression arithmétique $\intrfun{a}{A}$. Poursuivons avec la règle 
 de la séquence entre deux déclarations, d'une part si la première termine,
-\srule{\semanticd{Stm_1}{\sigma}{\emptyset}{\sigma'}}
-{\semanticd{\sseq{Stm_1}{Stm_2}}{\sigma}{Stm_2}{\sigma'}}
+\srule{\semanticd{s_1}{\sigma}{\emptyset}{\sigma'}}
+{\semanticd{\sseq{s_1}{s_2}}{\sigma}{s_2}{\sigma'}}
 D'autre part, si la première ne termine pas,
-\srule{\semanticd{Stm_1}{\sigma}{Stm_1'}{\sigma'}}
-{\semanticd{\sseq{Stm_1}{Stm_2}}{\sigma}{\sseq{Stm_1'}{Stm_2}}{\sigma'}}
+\srule{\semanticd{s_1}{\sigma}{s_1'}{\sigma'}}
+{\semanticd{\sseq{s_1}{s_2}}{\sigma}{\sseq{s_1'}{s_2}}{\sigma'}}
 La condition peut se formaliser de la sorte dans le cas où la garde est vérifiée,
 \srule{\intr{b}{B}{\sigma}}
-{\semanticd{\sifthenelse{b}{Stm_1}{Stm_2}}{\sigma}{Stm_1}{\sigma}}
+{\semanticd{\sifthenelse{b}{s_1}{s_2}}{\sigma}{s_1}{\sigma}}
 Dans le cas où elle ne l'est pas,
 \srule{\neg\intr{b}{B}{\sigma}}
-{\semanticd{\sifthenelse{b}{Stm_1}{Stm_2}}{\sigma}{Stm_2}{\sigma}}
-La dernière de nos déclarations est la boucle while, celle-ci peut en fait être 
-décrite grâce à la déclaration de la condition de la manière suivante,
-\[
-\swhiledo{b}{Stm}
-\equiv_d
-\sifthenelse{b}{\swhiledo{b}{Stm}}{\sskip}
-\]
-Ainsi, on peut déclarer la règle qui suit pour la déclaration while,
+{\semanticd{\sifthenelse{b}{s_1}{s_2}}{\sigma}{s_2}{\sigma}}
+On peut déclarer la règle qui suit pour la déclaration while,
 \srule{\intr{b}{B}{\sigma}}
-{\semanticd{\swhiledo{b}{Stm}}{\sigma}{\sseq{Stm}{\swhiledo{b}{Stm}}}{\sigma}}
+{\semanticd{\swhiledo{b}{s}}{\sigma}{\sseq{s}{\swhiledo{b}{s}}}{\sigma}}
+Enfin, pour l'opération return on donne la règle,
+\srule{ }{\semanticd{\sreturn{a}}{\sigma}{\emptyset}{\sigma}}
+\captionof{figure}{Sémantique}
 
 \section{Prérequis à l'analyse}
 De manière à pouvoir travailler avec les analyses de flot de données et de flot de contrôle, 
-il nous est au préalable nécessaire d'approfondir le principe d'étiquettage déjà abordé à la fin du premier chapitre.
+il est nécessaire d'approfondir les principes de bloc et d'étiquettage. Ceux-ci nous fourniront
+une bonne représentation de nos programmes, sur laquelle les analyses devront reposer.
 
-\subsection{Étiquettage}
-Avant tout, introduisons la fonction suivante,
-
-\[
-	\lambda: Stm \longrightarrow \mathbb{N}
-\]
-\newline
-qui prend une déclaration $s$ et retourne une étiquette unique.
-\newline
-\newline
-\definition{Soient $s \in Stm$ et $(l_n)_{n\in\mathbb{N}}$ une liste d'étiquettes, $s$ est dite bien formée si et seulement}
-si $\forall i \in \mathbb{N}, \forall j \in \mathbb{N}$ tel que $i \ne j$ alors $l_i \ne l_j$.
-\newline
-\newline
-Étant donné un programme $P$ défini par l'ensemble de ses déclarations atomiques, on a alors que 
-$\pi \in \mathcal{P}(P)$, un sous bloc de ce programme, n'admet qu'une seule entrée et une ou plusieurs sorties. 
-On peut maintenant définir la fonction $\iota$, qui retournera la première étiquette rencontrée dans une déclaration,
-
-\begin{align*}
-	\iota : Stm &\longrightarrow \mathbb{N}\\
-	(\sassign{Id}{Exp_a})^l &\longmapsto l\\
-	\sseq{s_1}{s_2} &\longmapsto \iota(s_1)\\
-	{\sskip}^l &\longmapsto l\\
-	\sifthenelse{b^l}{s_1}{s_2} &\longmapsto l\\
-	\swhiledo{b^l}{s} &\longmapsto l
-\end{align*}
-Comme expliqué précédemment, il est aussi nécessaire de déclarer une fonction $\phi$ qui retournera l'ensemble des étiquettes finales 
-à la fin d'un bloc $\pi$.
-
-\begin{align*}
-	\phi : Stm &\longrightarrow \mathcal{P}(\mathbb{N})\\
-	(\sassign{Id}{Exp_a})^l &\longmapsto \{l\}\\
-	\sseq{s_1}{s_2} &\longmapsto \phi(s_2)\\
-	\sskip^l &\longmapsto \{l\}\\
-	\sifthenelse{b^l}{s_1}{s_2} &\longmapsto \phi(s_1) \cup \phi(s_2)\\
-	\swhiledo{b^l}{s} &\longmapsto \{l\}
-\end{align*}
 \subsection{Blocs}
-De manière à faciliter l'analyse d'un programme, il est utile de partitionner et de factoriser notre représentation du code. 
-Les blocs ont été évoqués dans la partie précédente comme des sous-parties de l'ensemble des déclarations atomiques d'un programme. 
-On peut désormais les définir de la sorte,
+De manière à faciliter l'analyse sur une déclaration, il est utile de partitionner et de factoriser notre représentation du code. 
+Les blocs peuvent être perçus comme un concentré des déclarations atomiques dans un programme. Par exemple, les conditions ainsi
+que les boucles reposent toutes deux sur une garde booléenne, on peut donc les factoriser. 
+Étant donné l'aspect rudimentaire de notre langage, on peut simplement définir le bloc de la sorte,
 
 \begin{dtype}{Block}
-	\inlinekind{\sassign{Id}{Exp_a}}\\
-	\akind{Exp_b}\\
-	\akind{\sskip}
+	\inlinekind{\sassign{x}{a}}\\
+	\akind{b}\\
+	\akind{\sskip}\\
+	\akind{\sreturn{a}}
 \end{dtype}
-Maintenant les blocs correctement définis, il nous faut pouvoir les lier à une étiquette. Pour ce faire, on se donne $\beta$ définie par,
+
+On remarquera que le bloc est défini de manière atomique. Cependant il est tout-à-fait possible de considérer des séquences
+d'instructions comme un bloc à part entière, ce qui pourra dans certains cas largement simplifier la représentation du flot
+de contrôle.
+
+\subsection{Étiquettage}
+De manière à correctement travailler avec ces blocs, il faut avoir une information sur leur position relative, par rapport
+aux autres blocs. Il est donc nécessaire de les coupler chacun à un identifiant unique. 
+On définit $\mathbb{L}\subseteq\mathbb{N}$ l'ensemble fini des étiquettes d'une déclaration. Introduisons l'application suivante,
+\[
+	\lambda: Block \longrightarrow \mathbb{L}
+\]
+\newline
+qui prend un bloc et retourne une étiquette unique par rapport au reste des blocs sur une déclaration.
+\newline
+\newline
+\begin{definition}
+	Soient $s \in Stm$ et $(l_n)_{n\in\mathbb{N}}$ une suite d'étiquettes construite par $\lambda$ sur $s$.
+	On dit que $\lambda$ est bien formée si et seulement si $\forall i \in \mathbb{N}, \forall j \in \mathbb{N}$ 
+	tel que $i \neq j$ on a $l_i \neq l_j$.
+\end{definition}
+\newline
+À terme, on voudrait représenter le programme par un graphe (le graphe de flot de contrôle) dont chaque noeud représenterait un bloc. 
+Étant donné une déclaration $s$, on a pour  $b$ un bloc de $s$, $\delta_-(b) = 1$ le degré entrant et $\delta_+(b) \ge 1$, 
+le degré sortant du noeud correspondant dans le graphe de flot de contrôle.
+\\
+\begin{notation}
+	Pour des raisons de commodité, si $s \in Stm$ et $l = \lambda(s)$ alors on notera $s^l \in Stm$ la déclaration munie d'une étiquette.
+	Si la déclaration est une condition ou une boucle, l'étiquette sera rattachée à la garde de ces dernières.
+\end{notation}
+\\
+On peut maintenant définir l'application $init$, qui retournera la première étiquette rencontrée dans une déclaration,
 
 \begin{align*}
-	\beta : Stm &\longrightarrow \mathcal{P}(\mathbb{N} \times Block)\\
-	(\sassign{Id}{Exp_a})^l&\longmapsto\{(l, Id := Exp_a)\}\\
-	\sseq{s_1}{s_2} &\longmapsto \beta(s_1) \cup \beta(s_2)\\
-	\sskip^l &\longmapsto \{(l, \textit{Skip})\}\\
-	\sifthenelse{b^l}{s_1}{s_2} &\longmapsto \{(l, b)\}\cup \beta(s_1)\cup\beta(s_2)\\
-	\swhiledo{b^l}{s} &\longmapsto \{(l, b)\}\cup\beta(s)
+	init : Stm &\longrightarrow \mathbb{L}\\
+	(\sassign{x}{a})^l &\longmapsto l\\
+	\sseq{s_1}{s_2} &\longmapsto init(s_1)\\
+	{\sskip}^l &\longmapsto l\\
+	\sifthenelse{b^l}{s_1}{s_2} &\longmapsto l\\
+	\swhiledo{b^l}{s} &\longmapsto l\\
+	(\sreturn{a})^l & \longmapsto l
 \end{align*}
-À partir de là, il est possible de formaliser les graphes orientés de flot. Les blocs en représentent les noeuds, et le passage 
-vers le bloc suivant est représenté par un arc.
+Comme expliqué précédemment, il est aussi nécessaire de déclarer une fonction $final$ qui retournera l'ensemble des étiquettes finales 
+à la fin d'un bloc.
+
+\begin{align*}
+	final : Stm &\longrightarrow \mathcal{P}(\mathbb{L})\\
+	(\sassign{x}{a})^l &\longmapsto \{l\}\\
+	\sseq{s_1}{s_2} &\longmapsto final(s_2)\\
+	\sskip^l &\longmapsto \{l\}\\
+	\sifthenelse{b^l}{s_1}{s_2} &\longmapsto final(s_1) \cup final(s_2)\\
+	\swhiledo{b^l}{s} &\longmapsto \{l\}\\
+	(\sreturn{a})^l &\longmapsto \{l\}
+\end{align*}
 
 \subsection{Flots}
+\begin{definition}
+	Un graphe de flot de contrôle (CFG) est un graphe orienté dont les noeuds représentent les blocs et les arcs un
+	flot de contrôle (de même orientation que l'exécution du programme). Dans notre cas, le graphe de flot de
+	contrôle aura un seul noeud d'entrée et un seul noeud de sortie.
+\end{definition}
+\\
+En voici quelques exemples,
+\begin{center}\input{cfg.fig}\end{center}
+\captionof{figure}{Graphe de flot de contrôle}
+
+De manière à correctement identifier chaque bloc lors d'une analyse statique, il nous faut les lier à une étiquette
+unique. Pour ce faire, 
+on pose l'application $blocks$ définie par,
+\begin{align*}
+	blocks : Stm &\longrightarrow \mathcal{P}(\mathbb{L} \times Block)\\
+	(\sassign{x}{a})^l&\longmapsto\{(l, x := a)\}\\
+	\sseq{s_1}{s_2} &\longmapsto blocks(s_1) \cup blocks(s_2)\\
+	\sskip^l &\longmapsto \{(l, \sskip)\}\\
+	\sifthenelse{b^l}{s_1}{s_2} &\longmapsto \{(l, b)\}\cup blocks(s_1)\cup blocks(s_2)\\
+	\swhiledo{b^l}{s} &\longmapsto \{(l, b)\}\cup blocks(s)\\
+	(\sreturn{a})^l &\longmapsto \{(l, \sreturn{a})\}
+\end{align*}
+À partir de là, il est possible de formaliser les graphes orientés de flot. Comme dit précédemment, les blocs en représentent les noeuds, 
+et le passage vers le bloc suivant est formulé par un arc.
+
 Nous avons désormais toutes les structures nécéssaires à la construction de notre graphe de flot. Pour le moment, il s'agira de 
 le construire naïvement, l'on reviendra plus tard sur les optimisations possibles. Ainsi, une manière simple de représenter ce 
-graphe est de considérer l'ensemble des couples des étiquettes de blocs qui indiqueront un arc du premier élément au second. 
-Pour ce faire, considérons l'application suivante, 
+graphe est de considérer l'ensemble des couples d'étiquettes qui indiqueront un arc d'un bloc à un autre. 
+Considérons donc l'application suivante, 
 
 \begin{align*}
-	\varrho : Stm &\longrightarrow \mathcal{P}(\mathbb{N}^2) \\
-	\sassign{Id}{Exp_a} &\longmapsto \emptyset \\
+	flow : Stm &\longrightarrow \mathcal{P}(\mathbb{L}^2) \\
+	\sassign{x}{a} &\longmapsto \emptyset \\
 	\sskip &\longmapsto \emptyset \\
-	\sseq{s_1}{s_2} &\longmapsto \varrho(s_1) \cup \varrho(s_2) \cup [\phi(s_1)\times\{\iota(s_2)\}] \\
-	\sifthenelse{b^l}{s_1}{s_2} &\longmapsto \varrho(s_1)\cup\varrho(s_2)\cup(l, \iota(s_1))\cup(l, \iota(s_2)) \\
-	\swhiledo{b^l}{s} &\longmapsto \varrho(s)\cup(l,\iota(s))\cup[\phi(s)\times\{l\}]
+	\sseq{s_1}{s_2} &\longmapsto flow(s_1) \cup flow(s_2) \cup [final(s_1)\times\{init(s_2)\}] \\
+	\sifthenelse{b^l}{s_1}{s_2} &\longmapsto flow(s_1)\cup flow(s_2)\cup\{(l, init(s_1)),(l, init(s_2))\} \\
+	\swhiledo{b^l}{s} &\longmapsto flow(s)\cup\{(l,init(s))\}\cup[final(s)\times\{l\}]\\
+	\sreturn{a} &\longmapsto \emptyset
 \end{align*}
-On introduira aussi un accès à l'ensemble des successeurs d'un bloc par la fonction,
+On introduira aussi un accès à l'ensemble des successeurs d'un bloc par l'application,
 \begin{align*}
-	succ : \mathbb{N} &\longrightarrow \mathcal{P}(\mathbb{N})\\
-	l &\longmapsto \{l' \in \mathbb{N} \mid (l, l') \in \mathcal{G}_V\},
+	succ : \mathbb{L} &\longrightarrow \mathcal{P}(\mathbb{L})\\
+	l &\longmapsto \{l' \in \mathbb{L} \mid (l, l') \in \mathcal{G}_V\},
 \end{align*}
-où $\mathcal{G}_V$ est l'ensemble des arcs du graphe de flot de contrôle du programme.
+où $\mathcal{G}_V$ est l'ensemble des arcs du graphe de flot de contrôle du programme. Réciproquement, on 
+utilisera $pred$ qui donnera cette fois-ci accès aux prédecesseurs d'un bloc.
 
 \section{Analyse de vivacité}
-La première analyse sur laquelle nous travaillons est l'analyse de vivacité des variables de nos programmes. 
-Il s'agira donc de déterminer pour chaque bloc d'un programme, l'ensemble de variables encore vivantes, c'est-à-dire
-encore utilisées une fois le bloc courrant passé. Pour ce faire, il faut au préalable déclarer quelques ensembles 
+La première analyse statique sur laquelle nous travaillerons est l'analyse de vivacité des variables dans nos programmes. 
+Il s'agira donc de déterminer pour chaque bloc, l'ensemble de variables encore vivantes, c'est-à-dire
+encore utilisées une fois le présent bloc passé. Pour cela, il faut au préalable déclarer quelques ensembles 
 nécessaires à cette analyse.
 
-\subsection{Description ensembliste du programme}
-Soit $V$ l'ensemble des variables déclarées dans un programme. On se donne alors $S = (\mathcal{P}(V), \subseteq)$
-l'ensemble partiellement ordonné des parties de $V$.
+\subsection{Description ensembliste d'un programme}
+On se donne $(\mathcal{P}(\mathbb{V}), \subseteq)$ l'ensemble partiellement ordonné des parties de $\mathbb{V}$, 
+le treillis sur lequel on travaillera désormais.
 \\
-Pour $l \in \mathbb{N}$ l'étiquette d'un bloc, on définit désormais les ensembles qui suivent,
-\[GEN[l] \subseteq \mathcal{P}(V)\]
+Pour $l \in \mathbb{L}$ l'étiquette d'un bloc, on définit les ensembles qui suivent,
+\[\sgen{l} \subseteq \mathcal{P}(\mathbb{V})\]
 l'ensemble des variables appelées dans le bloc en question et,
-\[KILL[l] \subseteq \mathcal{P}(V)\]
-l'ensemble des variables nouvellement assignées donc considérées pour lors comme mortes. Enfin on se donnera,
-\[vars : Exp_a \cup Exp_b \longrightarrow \mathcal{P}(V)\]
-l'ensemble des identifiants présents dans une expression arithmétique ou booléenne.
+\[\skill{l} \subseteq \mathcal{P}(\mathbb{V})\]
+l'ensemble des variables nouvellement affectées, donc considérées pour lors comme mortes. Enfin on se donnera,
+\[vars_a : \arithexp \longrightarrow \mathcal{P}(\mathbb{V})\]
+l'ensemble des identifiants de variables présentes dans une expression arithmétique et,
+\[vars_b : \boolexp \longrightarrow \mathcal{P}(\mathbb{V})\]
+l'ensemble des identifiants de variables présentes dans une expression booléenne.
 \\
-On peut désormais introduire les fonctions,
+Définissons maintenant la construction de ces deux ensembles à partir d'un bloc comme,
 \begin{align*}
-	gen : Block &\longrightarrow \mathcal{P}(V)\\
-	\sassign{Id}{Exp_a} &\longmapsto vars(Exp_a)\\
+	gen : Block &\longrightarrow \mathcal{P}(\mathbb{V})\\
+	\sassign{x}{a} &\longmapsto vars_a(a)\\
 	\sskip &\longmapsto \emptyset\\
-	Exp_b &\longmapsto vars(Exp_b)
+	b &\longmapsto vars_b(b)\\
+	\sreturn{a} &\longmapsto vars_a(a)
 \end{align*}
-génère l'ensemble $GEN[l]$ et,
+génère l'ensemble $\sgen{l}$ et,
 \begin{align*}
-	kill : Block &\longrightarrow \mathcal{P}(V)\\
-	\sassign{Id}{Exp_a} &\longmapsto \{Id\}\\
+	kill : Block &\longrightarrow \mathcal{P}(\mathbb{V})\\
+	\sassign{x}{a} &\longmapsto \{x\}\\
 	\sskip &\longmapsto \emptyset\\
-	Exp_b &\longmapsto \emptyset
+	b &\longmapsto \emptyset\\
+	\sreturn{a} &\longmapsto \emptyset
 \end{align*}
-génère l'ensemble $KILL[l]$.
+génère l'ensemble $\skill{l}$.
 \\
 \\
-Notre langage étant un langage impératif, il est par conséquent naturel d'effectuer cette analyse de bas en haut dans le programme,
-de manière à déterminer cette vivacité. Ainsi l'on déclare deux ensembles de variables vivantes à l'entrée, et à la
-sortie d'un bloc. On les définit comme tels,
+Notre langage étant un langage impératif, il est par conséquent naturel d'effectuer cette analyse de bas en haut dans le parcours des déclarations,
+de manière à déterminer cette vivacité. Pour pouvoir donner forme à cette analyse, on déclare deux ensembles de variables vivantes à l'entrée, et à la
+sortie d'un bloc. Ils nous permettront par la suite de résoudre un système d'équation par itération et d'y trouver un point fixe. 
+On les définira comme tels,
 
 \[
 	LIVE_{out}[l] = 
@@ -337,188 +384,657 @@ sortie d'un bloc. On les définit comme tels,
 l'ensemble des variables vivantes à la sortie d'un bloc et,
 
 \[
-	LIVE_{in}[l] = GEN[l] \cup (LIVE_{out}[l] - KILL[l]),
+	LIVE_{in}[l] = \sgen{l} \cup (LIVE_{out}[l] - \skill{l}),
 \]
 l'ensemble des variables vivantes à l'entrée d'un bloc.
 \\
+\begin{notation}
+	Si $Z$ est une solution du système d'équation sur un treillis $(L, \sqsubseteq)$, on notera aussi $Z_l \subseteq L$
+	la solution au bloc d'étiquette $l$.
+\end{notation}
 \\
-En tant que tel, nous ne pouvons toujours pas effectuer l'analyse de vivacité sur nos programmes, il nous manque en
-effet un algorithme de point fixe pour y parvenir. Dans les parties suivantes, nous introduirons pour ce faire, 
-l'algorithme du point fixe de Kleene.
+À ce stade, nous ne pouvons pas encore effectuer l'analyse de vivacité sur nos programmes, il nous manque en
+effet un algorithme d'itération qui puisse résoudre le système d'équation qui est un point fixe en chaque bloc.
+La finalité étant de trouver le point fixe minimal.
 
 \subsection{Monotonie}
-La monotonie des ensembles de flot de données nous permet de déterminer l'existence d'un point fixe sur notre
-fonction. Cela sera donc utile pour fournir un algorithme qui termine, lors de la construction de ces ensembles, 
-étant donné que l'ensemble des variables d'un programme est supposé fini.
+La monotonie des ensembles de flot de données nous permettra de garantir ou non que le point fixe déterminé par un
+algorithme est le point fixe minimal. 
+Cela sera donc utile pour prouver la terminaison des algorithmes, étant donné que l'ensemble des variables $\mathbb{V}$ d'une déclaration est supposé fini.
 \\
 \\
-On se consacre, dans cette partie, à montrer la monotonie de nos ensembles $LIVE_{in}[l]$ et $LIVE_{out}[l]$
-pour toute étiquette $l$ de blocs. Posons la fonction,
+\begin{lemma}
+	Pour tout $l \in \mathbb{L}$ alors $\livein{l}$ et $\liveout{l}$ sont monotones.
+\end{lemma}
+\\
+\begin{proof}	
+Posons les applications,
 \begin{align*}
-	f_l : \mathcal{P}(V) &\longrightarrow \mathcal{P}(V) \\
-	\mathcal{O} &\longmapsto GEN[l] \cup (\mathcal{O} - KILL[l])
+	f : \mathcal{P}(\mathbb{V}) &\longrightarrow \mathcal{P}(\mathbb{V}) \\
+	X_l &\longmapsto \sgen{l} \cup (g(X_l) - \skill{l})
 \end{align*}
-Soient $k, k' \in \mathcal{P}(V)$ tels que $k \subseteq k'$, alors on a,
+où
 \begin{align*}
-	k - KILL[l] &\subseteq k' - KILL[l] \text{ et,}\\
-	GEN[l] \cup (k - KILL[l]) &\subseteq GEN[l] \cup (k' - KILL[l]).
+	g : \mathcal{P}(\mathbb{V}) &\longrightarrow \mathcal{P}(\mathbb{V})\\
+	X_l &\longmapsto \bigcup\limits_{p\in succ(l)} f(X_p)
 \end{align*}
-Donc $f_l(k) \subseteq f_l(k')$ ce qui implique $f_l$ monotone. Comme $LIVE_{out}[l]$ est une union de tous les $LIVE_{in}$
-de ses successeurs et que $f_l$ est une fonction monotone, on a que $LIVE_{out}[l]$ est monotone pour tout $l$, par récurrence
-sur la monotonie de l'union. Il vient de plus que $LIVE_{in}[l]$, dépendant de $LIVE_{out}[l]$, est monotone.
-Ainsi ces deux fonctions dépendants de l'étiquette d'un bloc sont monotones et produisent des ensembles finis, étant donné
-la finitude de $V$ dans notre cas.
+Soient $K_l, K'_l \in \mathcal{P}(\mathbb{V})$ deux analyses de même étiquette sur deux déclarations différentes au bloc
+d'étiquette $l$ sur $s \in Stm$ une déclaration. Elles sont telles que $K_l \subseteq K'_l$. On a alors,
+\[
+	g(K_l) \subseteq g(K'_l)
+\]
+comme $g$ ne traite que les blocs successeurs à ce bloc d'étiquette $l$, qui sont donc les mêmes.
+Ensuite on a $gen_K[l] \subseteq gen_{K'}[l]$ (par monotonie croissante de l'union) mais aussi $kill_{K'}[l] \subseteq kill_K[l]$ (par monotonie décroissante
+de la différence ensembliste) et d'après le précédent
+résultat, $g(K_l) \subseteq g(K'_l)$. Donc, par monotonie croissante de l'union on a bien
+\[
+	f(K_l) \subseteq f(K'_l)	
+\]
+Ainsi $\livein{l}$ et $\liveout{l}$ sont monotones croissantes.
+\end{proof}
 
 \subsection{Point fixe}
-Revenons-en à l'existence d'un point fixe, pour pouvoir construire un algorithme itératif. En effet,
-on a que $(\mathcal{P}(V), \subseteq)$ l'ensemble de nos variables est un ordre partiel et est fini.
-Ainsi, grâce à la monotonie de nos deux ensembles $LIVE_{in}$ et $LIVE_{out}$ démontrée ci-dessus, il
+Revenons-en à l'existence d'un point fixe, pour pouvoir construire un algorithme itératif. On dispose que 
+$(\mathcal{P}(\mathbb{V}), \subseteq)$ est un ensemble muni d'un ordre partiel et est fini.
+Ainsi, grâce à la monotonie de nos deux ensembles $\livein{\cdot}$ et $\liveout{\cdot}$, démontrée ci-dessus, il
 vient qu'à chaque itération de notre algorithme, l'ensemble produit sera soit identique à l'ensemble précédent,
-soit plus gros et la finitude de l'ensemble des variables assure qu'il ne pourra par grossir indéfiniment. On se sert pour ce faire
-du théorème du point fixe de Kleene qui s'énnonce comme suit,
-\newline
-\newline
-\begin{theorem}	
+soit plus gros et la finitude de l'ensemble des variables assure qu'il ne pourra par grossir indéfiniment. 
+Il faut cependant aussi avoir la garantie que la solution trouvée soit la plus petite qui puisse exister.
+On se sert pour y parvenir du théorème du point fixe de Kleene.
+\\
+\\
+\begin{theorem}
 	Soit $(L, \sqsubseteq)$ un ordre partiellement ordonné, avec un plus petit élément  $\perp$ et soit
 	une application $f : L \longrightarrow L$ monotone. Alors il existe un point fixe minimal qui est le suprémum de la suite,
 	\[\perp \sqsubseteq f(\perp) \sqsubseteq f^2(\perp) \sqsubseteq \cdots \sqsubseteq f^k(\perp) \sqsubseteq \cdots\]
 \end{theorem}
+\begin{proof}
+	[admise]
+\end{proof}
+Commençons par établir un algorithme de point fixe naïf. Il s'agira simplement de recalculer l'entierté du système
+d'équation à chaque itération, jusqu'à trouver le point fixe minimal (par le théorème de Kleene).
 
-\begin{algorithm}
+\begin{algorithm}[H]
 	\caption{Itération du point fixe}
 	\begin{algorithmic}
-		\State {Soit $S$ le programme}
-		\State $\mathcal{B} \leftarrow \beta(S)$
-		\State {Soit $L$ l'ensemble des étiquettes de $\mathcal{B}$}
-		\For{$l \in L$}
+		\State {Soit $s$ la déclaration}
+		\State $\mathcal{B} \leftarrow blocks(s)$
+		\State {Soit $\mathbb{L}$ l'ensemble des étiquettes de $\mathcal{B}$}
+		\For{$l \in \mathbb{L}$}
 		\State $live_{in}[l] \leftarrow \emptyset$
 		\State $live_{out}[l] \leftarrow \emptyset$
 		\EndFor
 		\While{$live_{in} \ne live_{in}' \textbf{ ou } live_{out} \ne live_{out}'$}
 		\For{$l \in L$}
 		\State $live_{out}[l] \leftarrow \bigcup\limits_{p\in succ(l)} live_{in}[p]$
-		\State $live_{in}[l] \leftarrow gen[l] \cup (live_{out}[l] - kill[l])$
+		\State $live_{in}[l] \leftarrow \sgen{l} \cup (live_{out}[l] - \skill{l})$
 		\EndFor
 		\EndWhile
 	\end{algorithmic}
 \end{algorithm}
-
-Si $n = \#\mathcal{B}$, alors cet algorithme a une complexité en $O(kn)$, où $k$ est la hauteur du diagramme
-de Hasse sur $(\mathcal{P}(V), \subseteq)$. Cela se montre grâce à la monotonie de $LIVE_{in}$, en effet,
-celle-ci ne fait que croître vers $\top$.
-Concernant l'implémentation, il peut être intéressant de définir $live$ comme une structure binaire de taille au
-moins $m$ bits avec $m = \#V$.
-Une amélioration peut être simplement faite sur l'algorithme décrit ci-dessus. Effectivement, on peut remarquer que,
-à chaque modification de $LIVE_{out}[l]$ seuls les blocs successeurs seront susceptibles de s'altérer. Donc
-au lieu d'itérer à nouveau sur l'ensemble des blocs, itérer uniquement sur les blocs successeurs au dernier
-bloc altéré. Cette approche a pour nom naturel de \textit{worklist}.
+Si $n = \#\mathbb{L}$, alors cet algorithme a une complexité en $O(kn)$, où $k$ est la hauteur du diagramme
+de Hasse sur $(\mathcal{P}(\mathbb{V}), \sqsubseteq)$. Cela se montre grâce à la monotonie de $\livein{\cdot}$, 
+celle-ci ne faisant que croître vers $\top$.
+Concernant l'implémentation, il peut être intéressant de définir $live_{in}$ et $live_{out}$ comme une structure binaire de taille au
+moins $m$ bits avec $m = \#\mathbb{V}$.
+En outre, une amélioration peut être simplement faite sur l'algorithme décrit ci-dessus en remarquant qu'à chaque 
+modification effective de $\liveout{\cdot}$, seuls les blocs prédecesseurs seront susceptibles de s'altérer. Cela
+vient du fait que l'analyse se fait de bas en haut. Donc
+au lieu d'itérer à nouveau sur l'ensemble des blocs, il suffit d'itérer uniquement sur les blocs, prédecesseurs au dernier
+bloc altéré. L'on décrira ce second algorithme plus bas dans la section.
 \\
 \\
-La correction de l'algorithme est la suivante, elle repose en partie sur ce qui a été dit en amont de cette section.
-En effet, à chaque itération, dans laquelle l'on vérifie si le point fixe a ou non été atteint, on met à jour les
-tableaux $live_{in}[l]$ et $live_{out}[l]$ pour tout bloc. Mais comme pour ce faire, on utilise deux fonctions monotones croissantes et qu'on suppose
-l'ensemble de nos variables fini, on est assuré de trouver le plus petit point fixe existant (par le théorème de Kleene) et ainsi de terminer l'algorithme.
+\begin{lemma}
+	Étant donné $s \in Stm$ une déclaration, à partir de $\bot$ l'algorithme d'itération du point fixe trouve effectivement
+	un point fixe sur $s$ et termine.
+\end{lemma}
 \\
-\\
-Dans cette étude, nous travaillerons avec les deux algorithmes évoqués pour réaliser les tests unitaires. Ci-dessous, un aperçu du fonctionnement
-de l'algorithme par worklist.
-
-\begin{algorithm}
+\begin{proof}
+Les correction et terminaison de l'algorithme reposent en partie sur ce qui a été dit en amont de cette section.
+On utilise deux fonctions croissantes monotones. Posons $f = live_{in}$ étant donné qu'on peut se restreindre
+à l'étude de $\livein{\cdot}$. À chaque itération deux cas s'offrent,
+\begin{enumerate}
+	\item si on atteint un point fixe pour tout $l \in \mathbb{L}$, on a $f^k(\bot)$ stationnaire
+	à partir de la $k$-ème itération. De plus, par monotonie de $f$, c'est le suprémum des $f^n(\bot)$ pour tout $n \in \mathbb{N}$ donc
+	l'algorithme a trouvé le point fixe minimal, par le théorème de Kleene.
+	\item sinon, le treillis a crû, par croissance monotone de $f$. Étant donné qu'on suppose $\mathbb{V}$ fini, le treillis continuera
+	de croître jusqu'à atteindre le premier cas évoqué, ou alors le cas $f^k(\bot) = \top$ pour tout $k \ge N \in \mathbb{N}$.
+\end{enumerate}
+Ainsi l'algorithme termine et trouve bien le plus petit point fixe.
+\end{proof}
+\begin{algorithm}[H]
 	\caption{Itération du point fixe (worklist)}
 	\begin{algorithmic}
-		\State {Soit $S$ le programme}
-		\State {Soit $L$ l'ensemble des étiquettes de $\mathcal{B}$}
-		\State $\mathcal{Q} \leftarrow L$ une queue des étiquettes
-		\For{$l \in L$}
+		\State $\mathcal{Q} \leftarrow \mathbb{L}$ une queue des étiquettes
+		\For{$l \in \mathbb{L}$}
 		\State $live_{in}[l] \leftarrow \emptyset$
 		\State $live_{out}[l] \leftarrow \emptyset$
 		\EndFor
 		\While{$\#\mathcal{Q} > 0$}
 		\State $q \leftarrow \mathcal{Q}$.pop
+		\State $live_{in}'[q] \leftarrow live_{in}[q]$
 		\State $live_{out}[q] \leftarrow \bigcup\limits_{p\in succ(q)} live_{in}[p]$
-		\State $live_{in}[q] \leftarrow gen[q] \cup (live_{out}[q] - kill[q])$
+		\State $live_{in}[q] \leftarrow \sgen{q} \cup (live_{out}[q] - \skill{q})$
+		\If {$live_{in}[q] \ne live_{in}'[q]$}
+		\State $\mathcal{Q}$.push(pred(q))
+		\EndIf
 		\EndWhile
 	\end{algorithmic}
 \end{algorithm}
-
-\section{Génération}
-Dans l'optique de vérification de la robustesse de nos différentes analyses, il peut être bon de réaliser
-des tests unitaires sur chacune d'elles. Pour cela on ne se restreindra pas aux tests conçus pas nous-même
-mais on essayera aussi de trouver tous les cas de figure par la manière forte. Un générateur de code complètement
-arbitraire est alors une bonne solution pour réaliser de tels tests. Dans notre cas, il permettra de mettre en
-lumière défaut sur l'algorithme de worklist.
+\noindent
+\begin{lemma}
+	Étant donné $s \in Stm$ une déclaration, à partir de $\bot$ l'algorithme par worklist trouve effectivement
+	un point fixe sur $s$ et termine.
+\end{lemma}
 \\
-Ce générateur de code est ajusté par un paramètre qu'est la quantité de variables assignées du programme. On
-cherche également à ce que le code généré soit le plus proche possible de celui qu'aurait pû fournir un humain.
-Dans notre syntaxe, il suffit pour le moment de donner une certaine répartition lors de la création des déclarations,
-en donnant plus de chance à l'assignation d'apparaître, que des blocs Ifte ou Whiledo par exemple.
-
+\begin{proof}
+On remarque qu'à la modification de l'analyse de vivacité $\liveout{\cdot}$,
+les blocs successeurs ne seront nullement impactés. En effet seuls les blocs prédecesseurs seront
+altérés d'après notre définition ensembliste de la vivacité. L'algorithme est donc une restriction de l'algorithme naïf vu plus
+haut. Posons $f = live_{in}$, on a deux cas,
+\begin{enumerate}
+	\item si pour $l \in \mathbb{L}$ on a trouvé un point fixe, c'est que l'élément $live_{in}[l]$ n'a pas été modifié donc
+	l'algorithme n'ajoute pas ses prédecesseurs à la queue. Ainsi, si on a trouvé une solution globale à la $k$-ème itération, 
+	alors $Card_k(\mathcal{Q}) > Card_{k+1}(\mathcal{Q}) > \cdots > Card_{k + n}(\mathcal{Q}) = 0$. Cela est du au fait que
+	l'algorithme n'ajoute plus rien à la queue mais lui retire un élément à chaque itération. Comme $f$ est monotone, on
+	a bien trouvé le point fixe minimal, par le théorème de Kleene.
+	\item sinon le treillis a crû et l'algorithme traite, en plus, les prédecesseurs du bloc altéré. Étant donné $\mathbb{V}$ fini,
+	on itère jusqu'à atteindre le premier cas, ou bien le cas où $f^k(\bot) = \top$ pour tout $k \ge N \in \mathbb{N}$.
+\end{enumerate}
+À partir du moment où l'algorithme trouve un point fixe minimal ou bien qu'il atteint $\top$, la queue $\mathcal{Q}$ ne se remplit
+plus mais est dépilée à chaque itération. Donc l'algorithme trouve bien le point fixe minimal et termine.
+\end{proof}
+\\
+Dans cette étude, nous travaillerons avec les deux algorithmes évoqués pour réaliser les différents tests unitaires.
+\\
+\\
+\begin{example}
+Considérons la déclaration suivante pour illustrer l'analyse de vivacité,
+\begin{lstlisting}[tabsize=2]
+	a := 0;
+	b := a;
+	while a < 100 do
+		if a = 2 then
+			c := a
+		else
+			c := 2 * a;
+			d := b
+		endif;
+		a := c + 1
+	done;
+	return c
+\end{lstlisting}
+On obtient donc l'analyse de vivacité suivante, en appliquant l'un des deux algorithmes explicités ci-dessus,
+\\
+\begin{center}
+	\begin{tabular}{||c|l|r|l||}
+	\hline
+	Étiq. & Bloc & $\livein{\cdot}$ & $\liveout{\cdot}$ \\
+	\hline
+	1 & a := 0 & $\emptyset$ & $\{a\}$\\
+	2 & b := a & $\{a\}$ & $\{a, b\}$\\
+	3 & while a < 100 do & $\{a, b\}$ & $\{a, b\}$\\
+	4 & if a = 2 then & $\{a, b\}$ & $\{a, b\}$\\
+	5 & c := a & $\{a, b\}$ & $\{b, c\}$\\
+	6 & c := 2 * a & $\{a, b\}$ & $\{b, c\}$\\
+	7 & d := b & $\{b, c\}$ & $\{b, c\}$\\
+	8 & a := c + 1 & $\{b, c\}$ & $\{a, b, c\}$\\
+	9 & return c & $\{c\}$ & $\emptyset$\\
+	\hline
+	\end{tabular}
+\end{center}
+\end{example}
 \section{Élimination de code mort}
 Cette analyse permet une première optimisation qu'est l'élimination de code mort. Elle consiste, en pré-compilation,
 à générer un nouveau code à partir du code initial, dans lequel le code dit mort n'est plus présent.
-On définira ici le code mort comme un ensemble de blocs d'un programme qui ne seront jamais utilisés.
+\\
+\\
+\begin{definition}
+	Soit $(x := a)^l$ un bloc d'affectation où $x \in \mathbb{V}$ et $l \in \mathbb{L}$. Si $x \notin \liveout{l}$, on dit que la variable $x$ est morte.
+\end{definition}
+
+En dehors de l'analyse, notre implémentation éliminera également les blocs de condition ou de boucle, si toutes leurs déclarations sont $\sskip$.
 
 \subsection{Réduction naïve}
-Cette optimisation peut en premier lieu être abordée de manière naïve. On notera $A$ l'analyse de flot de donnée.
-Considérons $\Delta$ la fonction d'élimination du code mort définie comme:
+Cette optimisation peut en premier lieu être abordée de manière naïve. On notera $\mathcal{A}$ l'analyse de flot de donnée.
+Considérons $\Delta$ la fonction d'élimination du code mort définie par,
 \[\Delta : \mathcal{A} \times Stm \longrightarrow Stm\]
-qui, à partir du code d'un programme et d'une analyse de flot de donnée, produit un nouveau code. $\Delta$ est itérée
-jusqu'à atteindre un point fixe sur le code envoyé, et le code reçu.	
-
+et qui, à partir d'une analyse de flot de donnée et d'une déclaration, produit une nouvelle déclaration. Soit $s \in Stm$, alors
+$s' = \Delta(\bot, s)$ est itérée jusqu'à atteindre $s' = s$. À chaque itération,
+l'analyse de vivacité de la nouvelle déclaration est à nouveau calculée à partir de $\bot$.
+ \\
+ \\
+\begin{example}
+Reprenons la précédente déclaration. Dans son analyse de vivacité, on remarque que
+$\{d\} \notin \liveout{7}$, donc $d$ est morte après avoir été affectée. L'algorithme
+applique alors sur ce bloc une transformation vers une instruction $\sskip$, puis calcule
+à nouveau l'analyse, à partir de $\bot$. On obtient alors,
+\\
+\begin{center}
+	\begin{tabular}{||c|l|r|l||}
+	\hline
+	Étiq. & Bloc & $\livein{\cdot}$ & $\liveout{\cdot}$ \\
+	\hline
+	1 & a := 0 & $\emptyset$ & $\{a\}$\\
+	2 & b := a & $\{a\}$ & $\{a\}$\\
+	3 & while a < 100 do & $\{a\}$ & $\{a\}$\\
+	4 & if a = 2 then & $\{a\}$ & $\{a\}$\\
+	5 & c := a & $\{a\}$ & $\{c\}$\\
+	6 & c := 2 * a & $\{a\}$ & $\{c\}$\\
+	7 & $\sskip$ & $\{c\}$ & $\{c\}$\\
+	8 & a := c + 1 & $\{c\}$ & $\{a, c\}$\\
+	9 & return c & $\{c\}$ & $\emptyset$\\
+	\hline
+	\end{tabular}
+\end{center}
+De la même manière, on a que $\{b\} \notin \liveout{2}$ donc $b$ est morte après
+affectation. L'algorithme réduit donc le bloc d'étiquette 2 puis recalcule l'analyse.
+On obtient finalement,
+\\
+\begin{center}
+	\begin{tabular}{||c|l|r|l||}
+	\hline
+	Étiq. & Bloc & $\livein{\cdot}$ & $\liveout{\cdot}$ \\
+	\hline
+	1 & a := 0 & $\emptyset$ & $\{a\}$\\
+	2 & $\sskip$ & $\{a\}$ & $\{a\}$\\
+	3 & while a < 100 do & $\{a\}$ & $\{a\}$\\
+	4 & if a = 2 then & $\{a\}$ & $\{a\}$\\
+	5 & c := a & $\{a\}$ & $\{c\}$\\
+	6 & c := 2 * a & $\{a\}$ & $\{c\}$\\
+	7 & $\sskip$ & $\{c\}$ & $\{c\}$\\
+	8 & a := c + 1 & $\{c\}$ & $\{a, c\}$\\
+	9 & return c & $\{c\}$ & $\emptyset$\\
+	\hline
+	\end{tabular}
+\end{center}
+Maintenant, aucune variable n'est morte après affectation, donc on a atteint un point fixe
+sur la réduction, c'est-à-dire que l'algorithme ne peut plus réduire quoi que ce soit et renvoie
+toujours la même déclaration. Cela termine avec la déclaration réduite,
+\begin{lstlisting}[tabsize=2]
+	a := 0;
+	skip;
+	while a < 100 do
+		if a = 2 then
+			c := a
+		else
+			c := 2;
+			skip
+		endif
+		a := c + 1
+	done;
+	return c
+\end{lstlisting}
+\end{example}
 \subsection{Incrémentalisation de la réduction}
-L'algorithme de cette seconde réduction consiste à ne pas calculer à nouveau l'analyse de vivacité pour le
-code nouvellement créé à chaque itération mais d'essayer, en une seule itération, de réutiliser l'analyse précédente.
+Cette réduction naïve est cependant particulièrement inefficace. En effet, elle doit à chaque itération calculer
+l'analyse à partir de $\bot$ et cela peut s'avérer lourd lorsque nos programmes se composent de milliers de blocs.
+On introduit donc la réduction de code mort par incrémentalisation, dans laquelle on essaye plutôt de calculer
+la nouvelle analyse de vivacité à partir de la précédente, ce qui réduit considérablement le nombre d'opérations.
 Pour résumer l'idée, voilà comment nous pourrions définir cette fois notre application de réduction,
 \[\Delta : \mathcal{A} \times Stm \longrightarrow \mathcal{A} \times Stm \]
-Cependant, si l'on considère $P$ un programme, $\mu_P$ son analyse de vivacité (qui est un point fixe minimal) et $P' \subset P$ ce même programme
-réduit, alors il n'est pas possible d'utiliser l'analyse de vivacité de $P$ pour poursuivre la réduction, étant donné que
-$\mu_{P'} \sqsubseteq \mu_P$ et que, comme démontré plus haut, la recherche de point fixe est croissante monotone. Donc
-$\mu_P$ ne sera pas stable pour $P'$. Il s'agit donc de trouver un moyen de réduire suffisament la précédente analyse de vivacité.
-Définissons l'application $g : \mathcal{P} \times \mathcal{A} \longrightarrow \mathcal{A}$, décroissante monotone et qui agit comme
-un filtre, étant donné un programme, et une analyse de vivacité. De manière à filtrer convenablement l'analyse, en fonction d'un programme
-réduit, il faut ajouter de l'information à cette dernière. Il faut en effet qu'à chaque bloc $b$, il soit possible de connaître quel bloc sous-jacent
-a besoin des variables vivantes en $b$. Pour se faire, on va quelque peu modifier nos fonctions $gen$ et $kill$ qui fourniront cette fois une image dans
-$\mathcal{P}(\mathbb{N} \times V)$. 
+qui se rappelle récursivement, en utilisant la précédente analyse pour réduire la nouvelle déclaration.
+\\
+\begin{notation}
+	Par la suite, on notera,
+	\[
+		\mathcal{L} = \{l \in \mathbb{L} \mid (x := a)^l \text{ et } \{x\} \notin \liveout{l}\}	
+	\]
+	l'ensemble des étiquettes dont le bloc d'affectation agit sur une variable morte.
+	De plus, si $s \in Stm$ une déclaration, on notera $\reduced{s}{\mathcal{L}}{\sskip}$ cette même déclaration, 
+	réduite aux blocs d'étiquette dans $\mathcal{L}$.
+\end{notation}
+
+Cependant, si on considère $s \in Stm$, $\mu_s$ son point fixe minimal et $s' = \reduced{s}{\mathcal{L}}{\sskip}$ cette même déclaration
+réduite, alors il n'est pas possible d'utiliser l'analyse de vivacité de $s$ pour poursuivre la réduction, étant donné qu'on ne peut pas garantir que
+$\mu_{s} \subseteq \mu_{s'}$ et que, comme démontré plus haut, la recherche de point fixe est croissante monotone uniquement. 
+Il s'agit donc de trouver un moyen de suffisament décroître le précédent treillis pour obtenir un pré-point fixe, qu'on pourra alors itérer et obtenir
+le point fixe minimal.
+Pour ce faire, on peut introduire un ensemble $\filterset$ qui agit comme un filtre de manière à supprimer l'information en trop. 
+Pour convenablement filtrer le treillis de $s$, il faut ajouter de l'information à cette dernière. 
+En effet, il est nécessaire qu'à chaque bloc $b$, il soit possible de connaître quel bloc sous-jacent
+a besoin des variables vivantes en $b$. Le treillis utilisé manque alors d'information et n'est plus adapté, étant donné qu'il n'est pas en mesure
+d'indiquer d'où vient la propagation d'une variable vivante. Donc le filtrer ne nous avancerait pas, étant donné qu'on n'obtiendra pas de
+pré-point fixe, mais quelque chose de beaucoup plus petit. On essayera donc plutôt d'utiliser le treillis $(\mathcal{P}(\mathbb{L} \times \mathbb{V}), \sqsubseteq)$. 
 \\
 \\
-En ce qui concerne la comparaison de ces paires, elle ne sera pas lexicographique, en effet, l'on souhaite que seul le premier bloc rencontré requiérant
-une variable soit représenté. La comparaison ne se fera donc que sur la variable. Lors de la réduction, si ce même bloc est réduit alors la propagation se faisant vers le haut, la seul information nécessaire
-et le premier bloc rencontré. Une fois cela acquis, il est possible d'énoncer le théorème qui suit;
+En ce qui concerne la comparaison de ces paires, elle dépend de la manière avec laquelle l'algorithme de réduction parcourira la déclaration donnée.
+En effet, si celui-ci se fait strictement de bas en haut, alors la comparaison peut uniquement se faire sur la variable. Nous préférerons néanmoins
+que ce treillis serve quelque soit l'ordre dans lequel l'algorithme effectue la réduction, la comparaison se fera donc sur l'étiquette
+et sur la variable. Une fois cela acquis, il est possible d'énoncer le théorème qui suit.
+\\
+\\
+\begin{example}
+	On illustre dans cet exemple, que la réutilisation en l'état de la précédente analyse de vivacité ne permet pas correctement
+	d'éliminer le code mort. Considérons la déclaration $s$ suivante.
+	\begin{lstlisting}[tabsize=2]
+		a := 0;
+		b := a + 1;
+		c := 2 * b;
+		return a
+	\end{lstlisting}
+	En appliquant l'un des deux algorithmes de point fixe, on obtient l'analyse de vivacité $\mu_s$ suivante,
+	\begin{center}
+		\begin{tabular}{||c|l|r|l||}
+		\hline
+		Étiq. & Bloc & $\livein{\cdot}$ & $\liveout{\cdot}$ \\
+		\hline
+		1 & a := 0 & $\emptyset$ & $\{a\}$\\
+		2 & b := a + 1 & $\{a\}$ & $\{a, b\}$\\
+		3 & c := 2 * b & $\{a, b\}$ & $\{a\}$\\
+		4 & return a & $\{a\}$ & $\emptyset$\\
+		\hline
+		\end{tabular}
+	\end{center}
+	On a $\{c\} \notin \liveout{3}$ donc on obtient $s' = \reduced{s}{\{3\}}{\sskip}$. Soit $\mu_{s'}$ l'analyse de vivacité
+	que nous devrions avoir pour poursuivre la réduction. Elle est telle que,
+	\begin{center}
+		\begin{tabular}{||c|l|r|l||}
+		\hline
+		Étiq. & Bloc & $\livein{\cdot}$ & $\liveout{\cdot}$ \\
+		\hline
+		1 & a := 0 & $\emptyset$ & $\{a\}$\\
+		2 & b := a + 1 & $\{a\}$ & $\{a\}$\\
+		3 & $\sskip$ & $\{a\}$ & $\{a\}$\\
+		4 & return a & $\{a\}$ & $\emptyset$\\
+		\hline
+		\end{tabular}
+	\end{center}
+	On a donc que $\mu_{s'} \subseteq \mu_s$, comme $\mu_{s'}[3] \subseteq \mu_s[3]$. Comme nos algorithmes de point fixe reposent
+	sur la monotonie, croissante dans le cas de l'anayse de vivacité, alors on ne pourra jamais atteindre $\mu_{s'}$ à partir de $\mu_s$.
+	Plus spécifiquement, dans $s'$, la variable au bloc d'affectation d'étiquette $2$ est morte, or dans $\mu_s$ on a $\{b\} \in \liveout{2}$. 
+	La réduction de $s'$ ne peut donc pas se faire à partir de $\mu_s$.	
+\end{example}
 \\
 \\
 \begin{theorem}
-	Soient $P$ un programme, $\mu_P \in \mathcal{A}$ son analyse de vivacité et $P' \subset P$ sa réduction.
-	Alors,
-	\[S = g(P', \mu_P)\]
-	est un pré-point fixe et $S \sqsubseteq \mu_{P'}$ le point fixe minimale de $P'$.
+	Soient $s \in Stm$, et $s' = \reduced{s}{\mathcal{L}}{\sskip}$ une réduction sur
+	l'ensemble d'étiquettes $\mathcal{L}$. Soient $\mu_s$ et $\mu_{s'}$ les point fixes minimaux respectifs
+	des deux déclarations.
+	Alors $\exists \filterset$ tel que $\forall l \in \mathbb{L}$,
+	\[
+		\mu_s[l] - \filterset \subseteq \mu_{s'}[l]
+	\]
+	est un pré-point fixe de $\mu_{s'}[l]$.
 \end{theorem}
 \\
 \\
 \begin{proof}
-	On note $L=P - P'$ l'ensemble des étiquettes liées aux blocs réduits. Dans notre cas, les block sont réduits un par un, donc on se restreindra au 
-	singleton $L = \{l\}$. On considère $\mu_P$ le point fixe minimal sur le programme $P$.
-		Si pour
-	\[I_l[\mu] = \{u := (l, v) \in \mathcal{P}(\mathbb{N} \times V) \mid \forall k \in \mathbb{N}, u \in \livein{k} \cup \liveout{k}\}\]
-	on a $I_l[\mu_P] \ne \emptyset$, alors $\mu_P$ ne peut pas être un point fixe sur le programme $P'$ étant donné qu'il contient des références vers un bloc réduit
-	(donc qui n'existe plus dans $P'$).
-	Il s'agit donc de décroître le treilli. Considérons l'analyse de vivacité $S$ construite à partir de $\mu_P$ telle que $I_l[S] = \emptyset$. On a donc 
-	$S \sqsubset \mu_P$. 
-	\\
-	Montrons que $S$ est un pré-point fixe, et plus particulièrement, un pré-point fixe de $\mu_{P'}$ le point fixe minimal sur $P'$.
-	Il faut d'abord montrer que $S \sqsubseteq \mu_{P'}$. Comme $\mu_P$ est minimal, alors pour tout $k$, on a les $\livein{k}$ et $\liveout{k}$ qui sont également
-	"minimaux". Ainsi, réduire un bloc nous amène donc à $S \sqsubseteq \mu_{P'}$. 
-	Revenons-en à la construction de $\livein{\cdot}$. De par la réduction effectuée de bas en haut, on est assuré que le code suffixe au bloc d'étiquette $l$ n'est
-	pas mort. Cela nous évite en particulier de s'attarder sur $kill[l]$, étant donné que la variable en question n'est par hypothèse plus utilisée plus bas dans le
-	programme. Deux cas se présentent donc ; soit $v \in gen[l]$,
-	\begin{enumerate}
-		\item Si $v$ est vivante après le bloc d'étiquette $l$, alors l'analyse doit être stabilisée, en effet il faut propager les blocs successeurs à $l$ vers les
-		blocs prédecesseurs. Donc $S \sqsubset \mu_{P'}$.
-		\item Sinon, $v$ est morte à la sortie du bloc précédant le bloc d'étiquette $l$, donc il n'est nul besoin de stabiliser et $S = \mu_{P'}$.
-	\end{enumerate}
-	Penchons-nous sur $\liveout{l}$ désormais. De par sa définition, on a donc 
-	\[\forall l' \in pred(l), succ_{S}(l') = succ(l') \cup succ(l) \]
-	Donc la réduction du bloc en question ne change que le CFG et donc n'altère pas le reste de l'analyse de vivacité du programme.
-	\\
-	On a donc bien $S \sqsubseteq \mu_{P'}$.\hfill$\square$
+	Soient $s \in Stm$ et $s' := \reduced{s}{\mathcal{L}}{\sskip}$ la déclaration à partir de $s$ dont les blocs d'étiquette 
+	dans $\mathcal{L}$ sont réduits. 
+	On se place en outre sur le treillis $(\mathcal{P}(\mathbb{L} \times \mathbb{V}), \subseteq)$. 
+	Une fois cela donné, on redéfinit ce que sont $vars$, $gen$ et $kill$ de la manière qui suit, 
+	\[vars_a : \mathbb{L} \times \arithexp \longrightarrow \mathcal{P}(\mathbb{L} \times \mathbb{V})\]
+	retourne désormais l'ensemble des variables d'une expression arithmétique, liées chacunes à l'étiquette du bloc qui les génère et,
+	\[vars_b : \mathbb{L} \times \boolexp \longrightarrow \mathcal{P}(\mathbb{L} \times \mathbb{V})\]
+	retourne désormais l'ensemble des variables d'une expression booléennes, liées chacunes à l'étiquette du bloc qui les génère.
+	\begin{align*}
+		gen : \mathbb{L} \times Block &\longrightarrow \mathcal{P}(\mathbb{L} \times \mathbb{V})\\
+		(l, \sassign{x}{a}) &\longmapsto vars_a(l, a)\\
+		(l, \sskip) &\longmapsto \emptyset\\
+		(l, b) &\longmapsto vars_b(l, b)\\
+		(l, \sreturn{a}) &\longmapsto vars_a(l, a)
+	\end{align*}
+	génère maintenant l'ensemble $\sgen{l}$ et,
+	\begin{align*}
+		kill : Block &\longrightarrow \mathcal{P}(\mathbb{L} \times \mathbb{V})\\
+		\sassign{x}{a} &\longmapsto \mathbb{L} \times \{x\}\\
+		\sskip &\longmapsto \emptyset\\
+		b &\longmapsto \emptyset\\
+		(l, \sreturn{a}) &\longmapsto \emptyset
+	\end{align*}
+	génère maintenant l'ensemble $\skill{l}$.
+	\\ 
+	Par commodité pour la suite, on se donnera les applications,
+	\begin{align*}
+		g : \mathcal{P}(\mathbb{L} \times \mathbb{V}) &\longrightarrow \mathcal{P}(\mathbb{L} \times \mathbb{V})\\
+		X_l &\longmapsto \bigcup\limits_{p\in succ(l)} f(X_p)
+	\end{align*}
+	monotone croissante, d'après la démonstration sur la monotonie de $\liveout{\cdot}$ ci-dessus où,
+	\begin{align*}
+		f : \mathcal{P}(\mathbb{L} \times \mathbb{V}) &\longrightarrow \mathcal{P}(\mathbb{L} \times \mathbb{V})\\
+		X_l &\longmapsto \sgen{l} \cup (g(X_l) - \skill{l})
+	\end{align*}
+	également monotone croissante par la démonstration sur la monotonie de $\livein{\cdot}$ ci-dessus.
+	On pose $E_s$ et $E_{s'}$ les deux systèmes d'équations respectivement de $s$ et de $s'$,
+	\[
+	E_s :
+	\begin{dcases*}
+		\livein{l} = f(\livein{l}) &$\forall l \in \mathbb{L} - \mathcal{L}$\,, \\
+		\livein{k} = f(\livein{k}) &$\forall k \in \mathcal{L}$\,,
+	\end{dcases*}
+	\]
+	et
+	\[
+	E_{s'} :
+	\begin{dcases*}
+		\livein{l} = f(\livein{l}) &$\forall l \in \mathbb{L} - \mathcal{L}$\,,\\
+		\livein{k} = g(\livein{k}) &$\forall k \in \mathcal{L}$\,.
+	\end{dcases*}
+	\]
+	Posons enfin, l'ensemble filtre tel que,
+	\[
+		\filterset = \mathcal{L} \times \mathbb{V}
+	\]
+	On considère $Z = (Z_l)_{l\in \mathbb{L}}$ le plus petit point fixe de la déclaration $s$ \textit{i.e.} la plus petite solution du système $E_s$.
+	Montrons d'abord que $\forall X = (X_l)_{l\in \mathbb{L}}$ solution de $E_{s'}$ alors,
+	\[Z_k - \filterset \subseteq X_k, \forall k \in \mathcal{L}\]
+	D'après la définition de $gen$ sur ce treillis il vient que $\sgen{k} \subseteq I_{\mathcal{L}}$, donc on a
+	\[Z_k - \filterset = g(Z_k) - (\skill{k} - \{(k, v) \mid v \in \mathbb{V}\}) \subseteq g(Z_k) \subseteq g(X_k) = X_k\]
+	comme on suppose $Z$ la plus petite solution du système $E_s$.
+	Montrons ensuite que $\forall X = (X_l)_{l\in \mathbb{L}}$ solution de $E_{s'}$ on a,
+	\[
+		Z_l - \filterset \subseteq X_l, \forall l \in \mathbb{L} - \mathcal{L}
+	\]
+	Dans ce cas, on remarque que 
+	\[Z_l - X_l \subseteq Z_l \cap \filterset\] 
+	mais aussi que, 
+	\[X_l - Z_l \subseteq \mathcal{U} = \bigcup\limits_{k\in \mathcal{L}} g(X_k) \cap \skill{k}\]
+	et ainsi que,
+	\[g(Z_l) - I_{\mathcal{L}} \subseteq g(X_l)\]
+	Donc on obtient que,
+	\[
+		Z_l - \filterset \subseteq \sgen{l} \cup (g(X_l) - \mathcal{U} - \skill{l}) \subseteq f(X_l) = X_l
+	\]
+	Étant donné que $[g(X_l) - \mathcal{U}] \cap \filterset = \emptyset$ il n'est pas nécessaire de retirer à $\skill{l}$ les possibles
+	éléments dans $\mathcal{L}$.
+	Donc pour tout $X$ solution du système $E_{s'}$ et pour tout $l \in \mathbb{L}$, on a montré que $Z_l - \filterset \subseteq X_l$ .
+	La différence ensembliste étant monotone décroissante, on a bien que la différence de $\filterset$ à $Z$
+	est un pré-point fixe de $\mu_{s'}$, la plus petite solution de $E_{s'}$.
 \end{proof}
+\\
+\\
+\begin{example}
+Illustrons tout ce qui vient d'être dit, avec une déclaration sur laquelle on applique une incrémentalisation, d'abord à l'aide du premier
+treillis, puis à l'aide du second. Reprenons la précédente déclaration en ajoutant quelques lignes,
+\begin{lstlisting}[tabsize=2]
+	a := 0;
+	b := a;
+	b := b + 3;
+	while a < 100 do
+		if a = 2 then
+			c := a;
+			d := b
+		else
+			c := 2 * a;
+			e := b
+		endif;
+		a := c + 1
+	done;
+	return c
+\end{lstlisting}
+On trouve la première analyse de vivacité, à partir de $\bot$ sur le treillis $(\mathcal{P}(\mathbb{V}), \subseteq)$
+\begin{center}
+	\begin{tabular}{||c|l|r|l||}
+	\hline
+	Étiq. & Bloc & $\livein{\cdot}$ & $\liveout{\cdot}$ \\
+	\hline
+	1 & a := 0 & $\emptyset$ & $\{a\}$\\
+	2 & b := a & $\{a\}$ & $\{a, b\}$\\
+	3 & b := b + 3 & $\{a, b\}$ & $\{a, b\}$\\
+	4 & while a < 100 do & $\{a, b\}$ & $\{a, b\}$\\
+	5 & if a = 2 then & $\{a, b\}$ & $\{a, b\}$\\
+	6 & c := a & $\{a, b\}$ & $\{b, c\}$\\
+	7 & d := b & $\{b, c\}$ & $\{b, c\}$\\
+	8 & c := 2 * a & $\{a, b\}$ & $\{b, c\}$\\
+	9 & e := b & $\{b, c\}$ & $\{b, c\}$\\
+	10 & a := c + 1 & $\{b, c\}$ & $\{a, b, c\}$\\
+	11 & return c & $\{c\}$ & $\emptyset$\\
+	\hline
+	\end{tabular}
+\end{center}
+Supposons désormais, qu'on veuille réduire le bloc d'étiquette 9, et produire la nouvelle analyse de vivacité
+à partir de celle décrite ci-dessus. En ce bloc, on a $\sgen{9} = \{b\}$ donc il faut propager la perte de vivacité
+de ce bloc, vers ses blocs prédecesseurs. Vient le problème de l'origine de la vivacité sur une variable. En effet,
+en l'état de ce treillis, il est impossible de savoir, ni qui utilise ces variables dans les blocs successeurs ni qui
+maintient la vivacité, pour cause du bloc 9, dans les blocs prédecesseurs. On ne peut pas simplement enlever tous les $b$
+de l'analyse étant donné que $b$ est aussi utilisée par 3 et 7. Donc on ne peut pas garantir l'obtention d'un
+pré-point fixe sur le code réduit. Essayons désormais le second treillis, 
+$(\mathcal{P}(\mathbb{L} \times \mathbb{V}), \subseteq)$. Cette fois-ci, on trouve la première analyse de vivacité, à partir
+de $\bot$,
+\begin{center}
+	\begin{tabular}{||c|l|r|l||}
+	\hline
+	Étiq. & Bloc & $\livein{\cdot}$ & $\liveout{\cdot}$ \\
+	\hline
+	1 & a := 0 & $\emptyset$ & $\{a_4, a_5, a_6, a_8\}$\\
+	2 & b := a & $\{a_4, a_5, a_6, a_8\}$ & $\{a_4, a_5, a_6, a_8, b_3\}$\\
+	3 & b := b + 3 & $\{a_6, a_5, a_6, a_8, b_3\}$ & $\{a_4, a_5, a_6, a_8, b_7, b_9\}$\\
+	4 & while a < 100 do & $\{a_4, a_5, a_6, a_8, b_7, b_9\}$ & $\{a_5, a_6, a_8, b_7, b_9\}$\\
+	5 & if a = 2 then & $\{a_5, a_6, a_8, b_7, b_9\}$ & $\{a_6, a_8, b_7, b_9\}$\\
+	6 & c := a & $\{a_6, b_7, b_9\}$ & $\{b_7, b_9, c_{10}, c_{11}\}$\\
+	7 & d := b & $\{b_7, b_9, c_{10}, c_{11}\}$ & $\{b_7, b_9, c_{10}, c_{11}\}$\\
+	8 & c := 2 * a & $\{a_8, b_7, b_9\}$ & $\{b_7, b_9, c_{10}, c_{11}\}$\\
+	9 & e := b & $\{b_7, b_9, c_{10}, c_{11}\}$ & $\{b_7, b_9, c_{10}, c_{11}\}$\\
+	10 & a := c + 1 & $\{b_7, b_9, c_{10}, c_{11}\}$ & $\{a_4, a_5, a_6, a_8, b_7, b_9, c_{11}\}$\\
+	11 & return c & $\{c_{11}\}$ & $\emptyset$\\
+	\hline
+	\end{tabular}
+\end{center}
+Réduisons désormais le bloc d'étiquette 9 et appliquons le filtre $I_{\{9\}}$ sur l'analyse.
+\begin{center}
+	\begin{tabular}{||c|l|r|l||}
+	\hline
+	Étiq. & Bloc & $\livein{\cdot}$ & $\liveout{\cdot}$ \\
+	\hline
+	1 & a := 0 & $\emptyset$ & $\{a_4, a_5, a_6, a_8\}$\\
+	2 & b := a & $\{a_4, a_5, a_6, a_8\}$ & $\{a_4, a_5, a_6, a_8, b_3\}$\\
+	3 & b := b + 3 & $\{a_6, a_5, a_6, a_8, b_3\}$ & $\{a_4, a_5, a_6, a_8, b_7\}$\\
+	4 & while a < 100 do & $\{a_4, a_5, a_6, a_8, b_7\}$ & $\{a_5, a_6, a_8, b_7\}$\\
+	5 & if a = 2 then & $\{a_5, a_6, a_8, b_7\}$ & $\{a_6, a_8, b_7\}$\\
+	6 & c := a & $\{a_6, b_7\}$ & $\{b_7, c_{10}, c_{11}\}$\\
+	7 & d := b & $\{b_7, c_{10}, c_{11}\}$ & $\{b_7, c_{10}, c_{11}\}$\\
+	8 & c := 2 * a & $\{a_8, b_7\}$ & $\{b_7, c_{10}, c_{11}\}$\\
+	9 & $\sskip$ & $\{b_7, c_{10}, c_{11}\}$ & $\{b_7, c_{10}, c_{11}\}$\\
+	10 & a := c + 1 & $\{b_7, c_{10}, c_{11}\}$ & $\{a_4, a_5, a_6, a_8, b_7, c_{11}\}$\\
+	11 & return c & $\{c_{11}\}$ & $\emptyset$\\
+	\hline
+	\end{tabular}
+\end{center}
+On a ainsi réussi à conserver l'information de la vivacité de $b$, propagée à partir des blocs 3 et 7 tout en précisant
+la perte de vivacité de $b$ à partir du bloc 9.
+On a bien obtenu un pré-point fixe de cette déclaration réduite à partir de l'analyse de vivacité précédente.
+Par la monotonie de l'algorithme d'itération, on peut donc faire croître ce treillis et trouver le point fixe minimal.
+\end{example}
+\section{Généralisation}
+Ceci achève une première analyse statique qu'est l'analyse de vivacité. On s'essaye maintenant à déterminer
+un lien plus général entre le prédicat, le treillis, et la transformation de code.
+\subsection{Motivations}
+On cherche à implémenter un meta-langage, qui servira entre notre langage et son compilateur, à orienter
+ce dernier sur les optimisations à fournir. Pour ce faire, on se sert de prédicats qui valideront ou non la
+transformation du code et cette dernière sera plus ou moins efficace selon le treillis qu'on décidera d'utiliser. 
+Ces prédicats sont des applications prenant des éléments évaluables à la compilation, 
+dans notre cas, des variables et plus tard, des routines.
+Soit $P : \mathbb{V} \longrightarrow \mathbb{B}$ un prédicat quelconque, voici un exemple d'un tel programme,
+\begin{lstlisting}[tabsize=2]
+	...
+	x := a;
+	...
+	y := 0;
+	#if P(x)
+		while(y < x) do
+			y := y + 1
+		done;
+	#else
+		y := 1;
+	#endif
+	...
+\end{lstlisting}
+La bonne utilisation de ces prédicats doit permettre la production d'un code assembleur minimal et le plus
+optimal possible, ce qui s'avère essentiel lorsqu'on recherche de hautes performances d'exécution.
+Revenons-en à un langage impératif tel que C pour illustrer cela. Supposons qu'on ait une simple fonction de division 
+par 32 d'un entier sur 32 bits.
+\begin{lstlisting}[tabsize=2, language=c]
+	int div(int x)
+	{
+		return x/32;
+	}
+\end{lstlisting}
+Le compilateur GCC produit alors le code assembleur suivant,
+\begin{lstlisting}[tabsize=2]
+	div:
+		mov     eax, DWORD PTR [rbp-4]
+		lea     edx, [rax+31]
+		test    eax, eax
+		cmovs   eax, edx
+		sar     eax, 5
+		ret
+\end{lstlisting}
+On suppose désormais que cette fonction sera appelée dans une boucle, à ne traiter que des entiers signés sur 32 bits, positifs.
+Alors ce code assembleur devient particulièrement inefficace étant donné qu'il considère le cas d'entiers
+négatifs. En effet, on aimerait plutôt avoir quelque chose comme,
+\begin{lstlisting}[tabsize=2]
+	div:
+		mov     eax, DWORD PTR [rbp-4]
+		shr     eax, 5
+		ret
+\end{lstlisting}
+ce qui est déjà bien mieux! On pourrait donc dans ce cas poser notre meta-langage sur l'appel de \textit{div}, avec un prédicat
+défini par,
+\[P : v \longmapsto \intrfun{v > 0 \vee v = 0}{B}(\sigma)\]
+où $\sigma$ est l'état de nos variables sur la pile. Cela donnerait l'hypothèse d'un entier positif à la pré-compilation
+et permettrait d'obtenir ce code assembleur spécifiquement.
+\subsection{Première approche}
+Entamons cette généralisation en partant d'équations similaires à celles de l'analyse de vivacité.
+On remarque en effet que pour toute sorte d'analyses statiques, on retrouvera toujours l'opérateur $\sqcup$
+sur les blocs successeurs ou prédecesseurs. Définissons donc une fonction de transfert $t_l$ au bloc d'étiquette $l$
+telle que,
+\[
+	t_l : L \longrightarrow L	
+\]
+où $(L, \sqsubseteq)$ est un treillis quelconque. Par exemple, la fonction de transfert pour l'analyse de vivacité est définie par,
+\[
+	t_l(s) = \sgen{l} \cup (s - \skill{l})	
+\] 
+On se donne alors pour commencer, les équations,
+\begin{align*}
+	A_{in}[l] &= t_l(A_{out}[l])\\
+	A_{out}[l]&= \bigsqcup\limits_{p \in \mathcal{K}_l} A_{in}[p]
+\end{align*}
+L'analyse de vivacité développée plus haut se faisait de bas en haut dans le parcours du CFG, on avait alors
+\[\mathcal{K}_l = succ(l)\] 
+Cependant, si l'analyse se fait de haut en bas, on aurait alors plutôt
+\[\mathcal{K}_l = pred(l)\]
+Jusqu'à maintenant, nous avions utilisé l'union des blocs dans le cadre de l'analyse de vivacité. Cela nous fournissait
+une analyse dans laquelle les informations requises étaient possiblement vraies. On peut néanmoins restreindre encore plus
+nos analyses en prenant $\sqcup=\cap$. Dans ce cas, l'information requise doit tout le temps être vraie. On notera que cette
+restriction supplémentaire change l'ordre dans notre treillis, avec $\sqsubseteq=\supseteq$.
+\\
+Ainsi on peut chercher des contraintes à poser sur les prédicats, en fonction de ces deux dimensions que sont l'analyse par
+l'avant, par l'arrière, intersectée ou à l'union.
+\section{Annexe}
+\subsection{Validation}
+\subsection{Tests unitaires}
+\subsection{Générateur}
+Dans l'optique de vérification de la robustesse de nos différentes analyses, il peut être bon de réaliser
+des tests unitaires sur chacune d'elles. Pour cela on ne se restreindra pas aux tests conçus pas nous-même
+mais on essayera aussi de trouver tous les cas de figure par la manière forte. Un générateur de code complètement
+arbitraire est alors une bonne solution pour réaliser de tels tests.
+\\
+Ce générateur de code est ajusté par un paramètre qu'est la quantité de variables affectées dans la déclaration. On
+cherche également à ce que le code généré soit le plus proche possible de celui qu'aurait pu fournir un humain.
+Dans notre syntaxe, il suffit pour le moment de donner une certaine répartition lors de la création des déclarations,
+en permettant plus d'affectations, que des blocs Ifte ou Whiledo par exemple.
+\subsection{Bugs}
+\section{Conclusion}
 \end{document}

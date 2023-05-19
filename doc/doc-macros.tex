@@ -5,13 +5,13 @@
         }
 }
 
-\newcommand{\definition}[1] {
-    \textbf{\textit{Définition --\space}}{#1}
+\newcommand{\arithexp}{
+    a
 }
 
-% \newcommand{\theorem}[1] {
-%     \textbf{\textit{Théorème --\space}}{#1}
-% }
+\newcommand{\boolexp}{
+    b
+}
 
 \newcommand{\sassign}[2] {
     {#1}\space:=\space{#2}
@@ -22,7 +22,7 @@
 }
 
 \newcommand{\sskip}{
-    \textit{Skip}
+    \textit{skip}
 }
 
 \newcommand{\sifthenelse}[3] {
@@ -31,6 +31,10 @@
 
 \newcommand{\swhiledo}[2] {
     \text{while }{#1}\text{ do }{#2}
+}
+
+\newcommand{\sreturn}[1] {
+    \text{return }{#1}
 }
 
 \newcommand{\intrfun}[2] {
@@ -54,11 +58,11 @@
 }
 
 \newcommand{\sgen}[1]{
-    GEN[#1]
+    gen[#1]
 }
 
 \newcommand{\skill}[1]{
-    KILL[#1]
+    kill[#1]
 }
 
 \newcommand{\srule}[2] {
@@ -75,9 +79,19 @@
     \newcommand{\akind}[1]{&\kind{##1}}
     \newcommand{\with}[1]{&##1\\}
     \csname align*\endcsname
-    #1 &\rightarrow}{
+    #1 &::=}{
     \csname endalign*\endcsname
 }
 
-\newenvironment{theorem}{\textbf{\textit{Théorème --\space}}}{}
-\newenvironment{proof}{\textbf{\textit{Démonstration --\space}}}{}
+\newcommand{\reduced}[3]{
+    #1[#2 \rightarrow{#3}]
+}
+
+\newcommand{\filterset}{I_{\mathcal{L}}}
+
+\newenvironment{definition}{\textbf{\textit{Définition --}}}{\\}
+\newenvironment{notation}{\textbf{\\\textit{Notation --}}}{\\}
+\newenvironment{theorem}{\textbf{\textit{Théorème --}}}{}
+\newenvironment{example}{\textbf{\textit{Exemple.}}\\}{}
+\newenvironment{lemma}{\textbf{\textit{Lemme --}}}{\\}
+\newenvironment{proof}{\textbf{\textit{Démonstration --}}}{\\\null\hfill$\square$\\}

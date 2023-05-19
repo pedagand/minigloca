@@ -53,9 +53,9 @@ and gen_assign vars i =
 and gen_ifte vars i =
   let be = gen_b vars i 1 in
   let bound = Random.int (Array.length vars - i) in
-  let bound_1 = bound / 2 in
-  let s_1 = generate vars i (i + bound_1) in
-  let s_2 = generate vars (i + bound_1) (i + bound) in
+  let bound' = bound / 2 in
+  let s_1 = generate vars i (i + bound') in
+  let s_2 = generate vars (i + bound') (i + bound) in
   (i + bound, Syntax.ifte be s_1 s_2)
 
 and gen_while vars i =

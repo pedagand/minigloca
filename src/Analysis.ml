@@ -5,7 +5,7 @@ open Label
 module LabelVarPair = struct
   type t = label * string
 
-  let compare (_, s_1) (_, s_2) = String.compare s_1 s_2
+  let compare b a = Stdlib.compare a b
 end
 
 module Vars = Set.Make (LabelVarPair)
@@ -20,8 +20,10 @@ let rec vars_a e from =
 let rec vars_b e from =
   match e with
   | True | False -> Vars.empty
-  | Lt (a_1, a_2) | Eq (a_1, a_2) -> Vars.union (vars_a a_1 from) (vars_a a_2 from)
-  | And (b_1, b_2) | Or (b_1, b_2) -> Vars.union (vars_b b_1 from) (vars_b b_2 from)
+  | Lt (a_1, a_2) | Eq (a_1, a_2) ->
+      Vars.union (vars_a a_1 from) (vars_a a_2 from)
+  | And (b_1, b_2) | Or (b_1, b_2) ->
+      Vars.union (vars_b b_1 from) (vars_b b_2 from)
   | Not b -> vars_b b from
 
 let gen (l, block) =
@@ -30,9 +32,9 @@ let gen (l, block) =
   | BlExpBool b -> vars_b b l
   | BlSkip -> Vars.empty
 
-let kill (l, block) =
+let kill labels block =
   match block with
-  | BlAssign (s, _) -> Vars.singleton (l, s)
+  | BlAssign (s, _) -> Vars.of_list (cartesian labels [ s ])
   | BlExpBool _ | BlSkip -> Vars.empty
 
 let succ cfg l =
@@ -83,6 +85,7 @@ let get_final_label cfg =
 *)
 
 type an_structure = {
+  labels : label list;
   blocks : block LabelMap.t;
   lblocks : (label * block) list;
   flow : EdgeSet.t;
@@ -97,9 +100,11 @@ let rec successor_blocks_union succ of_set =
 let rec update an_s lin lout =
   match an_s.lblocks with
   | [] -> (lin, lout)
-  | (l, b) as k :: t ->
+  | ((l, b) as k) :: t ->
       let live_out = successor_blocks_union (succ an_s.flow l) lin in
-      let live_in = Vars.union (gen k) (Vars.diff live_out (kill k)) in
+      let live_in =
+        Vars.union (gen k) (Vars.diff live_out (kill an_s.labels b))
+      in
       update { an_s with lblocks = t }
         (LabelMap.add l live_in lin)
         (LabelMap.add l live_out lout)
@@ -123,24 +128,27 @@ let rec dataflow_wl wl an_s lin lout =
       let live_in' = LabelMap.find l lin in
       let succs = succ an_s.flow l in
       let live_out = successor_blocks_union succs lin in
-      let live_in = Vars.union (gen (l, b)) (Vars.diff live_out (kill (l, b))) in
+      let live_in =
+        Vars.union (gen (l, b)) (Vars.diff live_out (kill an_s.labels b))
+      in
       let wl' = if live_in' = live_in then t else pred an_s.flow l @ t in
       dataflow_wl wl' an_s
         (LabelMap.add l live_in lin)
         (LabelMap.add l live_out lout)
 
 let build_analysis_structure stm =
+  let lbs = labels stm in
   let blocks = blocks_of stm LabelMap.empty in
   let flow = flow_of stm in
-  { blocks; lblocks = LabelMap.bindings blocks; flow }
+  { labels = lbs; blocks; lblocks = LabelMap.bindings blocks; flow }
 
 let dataflow stm algo =
-  let labels = labels stm in
+  (* let labels = labels stm in *)
   let an_s = build_analysis_structure stm in
   let fold_go m e = LabelMap.add e Vars.empty m in
-  let lin = List.fold_left fold_go LabelMap.empty labels in
-  let lout = List.fold_left fold_go LabelMap.empty labels in
-  algo labels an_s lin lout
+  let lin = List.fold_left fold_go LabelMap.empty an_s.labels in
+  let lout = List.fold_left fold_go LabelMap.empty an_s.labels in
+  algo an_s.labels an_s lin lout
 
 (*
   Searchs a fixed point from a given dataflow analysis   
@@ -157,7 +165,8 @@ let is_fixpoint_stable stm fp =
   let lin', lout' = update an_s lin lout in
   LabelMap.equal Vars.equal lin lin' && LabelMap.equal Vars.equal lout lout'
 
-let pprint_vars vars = Vars.iter (fun (l, b) -> Printf.printf "(%d:%s), " l b) vars
+let pprint_vars vars =
+  Vars.iter (fun (l, b) -> Printf.printf "(%d:%s), " l b) vars
 
 let pprint_dataflow (lin, lout) =
   LabelMap.iter
@@ -179,12 +188,12 @@ let dataflow_filter l fp =
   let rec help rl vars =
     match rl with
     | [] -> vars
-    | (lb, _) as k :: t when lb = l -> help t (Vars.remove k vars)
-    | _ :: t -> help t vars 
+    | ((lb, _) as k) :: t when lb = l -> help t (Vars.remove k vars)
+    | _ :: t -> help t vars
   in
   let rec go at analysis =
     match at with
     | [] -> analysis
     | (k, v) :: t -> go t (LabelMap.add k (help (Vars.elements v) v) analysis)
   in
-  go (LabelMap.bindings din) din, go (LabelMap.bindings dout) dout
+  (go (LabelMap.bindings din) din, go (LabelMap.bindings dout) dout)

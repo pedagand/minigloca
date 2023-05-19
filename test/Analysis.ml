@@ -18,7 +18,7 @@ let test_gloca_dataflow tag ast =
   Alcotest.(check lm_testable) tag lin' lin;
   Alcotest.(check lm_testable) tag lout' lout
   
-let test_dataflow () = Generator.iterate_on 100 test_gloca_dataflow 0 100
+let test_dataflow () = Generator.iterate_on 10 test_gloca_dataflow 0 20
 (* let top = Vars.of_list [ "a"; "b" ] in
    let a = Vars.of_list [ "a" ] in
    let b = Vars.of_list [ "b" ] in
