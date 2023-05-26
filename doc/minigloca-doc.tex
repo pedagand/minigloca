@@ -43,10 +43,11 @@
 \tableofcontents
 \newpage
 
+\newcommand{\pierre}[1]{\textcolor{red}{$\langle$ Pierre:} #1 \textcolor{red}{$\rangle$}}
+
 \section{Introduction}
-Le projet Gloca tient pour but initial d'offrir au programmeur un plus ample contrôle sur l'exécution de son programme.
-Il s'agit de remettre entre ses mains les optimisations qui sont aujourd'hui largement prises en charge par les compilateurs
-et parfois, au dépend des performances. L'optimisation en compilation repose en partie, depuis les années 1960, sur l'analyse statique de code. Cette
+Le projet Gloca a pour but initial d'offrir au programmeur un plus ample contrôle sur l'exécution de son programme\pierre{pas l'exécution : la compilation}.
+Il s'agit de remettre entre ses mains les optimisations qui sont aujourd'hui largement prises en charge par les compilateurs. L'optimisation en compilation repose en partie, depuis les années 1960, sur l'analyse statique de code. Cette
 dernière permet en quelque sorte de prévoir les différents comportements qui pourraient être émis par un programme. À partir de là, le
 compilateur doit agir en conséquence et optimise ainsi le code assembleur produit. Chaque analyse a sa propriété particulière à respecter.
 Par exemple, si le programme contient du code mort, c'est-à-dire du code qui ne sera jamais appelé quelque soit la manière avec laquelle
@@ -55,11 +56,11 @@ d'une boucle par exemple, alors la calculer une seule fois, la stocker en mémoi
 d'économiser énormément d'opérations.
 \\
 \\
-Cependant, il est des optimisations que le compilateur est incapable de réaliser car il existe des cas qu'il ne peut pas prévoir. Certaines
-optimisations peuvent aussi parfois ne pas servir du tout et au contraire ralentir le programme. Ces cas de figure peuvent
+Cependant, le compilateur n'est pas toujours en mesure de produire du code optimal car il existe des cas qu'il ne peut pas prévoir. Certaines
+optimisations peuvent aussi parfois être contre-productives et ralentir le programme. Ces cas de figure peuvent
 s'avérer problématique lorsque qu'on attend d'un programme qu'il réalise de gros calculs en tenant compte d'importantes contraintes, typiquement au sein
 de systèmes embarqués. Ce projet consistera donc à formaliser un langage impératif expérimental, sur lequel l'on développera une première analyse statique de deux manières
-différentes. Cela permettra ensuite d'appliquer une généralisation et de formuler une extension de ce langage, laquelle agira à la pré-compilation comme un meta-langage.
+différentes. Cela permettra ensuite d'appliquer une généralisation et de formuler une extension de ce langage, laquelle agira à la pré-compilation comme un méta-langage.
 Pour ce faire, on aura besoin d'établir certaines relations entre les prédicats qui composeront cette extension du langage et les
 analyses, qui seront appliquées en conséquence. Ces relations permettront enfin de donner un cadre efficace à l'utilisation des prédicats par le programmeur.
 \\
@@ -84,6 +85,10 @@ entiers ainsi que des identifiants de variables.
   \arithexp & ::= Int \mid Id \mid op_A(a_1, a_2) & op_A \in \{+, -, \times\}
 \end{align*}
 \captionof{figure}{Expression arithmétique}
+
+\pierre{Ce n'est pas très élégant de faire des captionof : il vaudrait
+  mieux faire des figure avec label et mettre des ref.}
+
 $\mathbb{V}$ décrira désormais l'ensemble des identifiants de variables affectées dans nos programmes. 
 \subsection{Expressions booléennes}
 Les expressions booléennes nous permettent d'introduire la comparaison entre deux expressions arithmétiques,
@@ -110,9 +115,9 @@ que les gardes booléennes, sur une condition ou une boucle. On pose la déclara
   \akind{\swhiledo{b}{s}}\\
   \akind{\sreturn{a}}
 \end{dtype}
-La déclaration return servira pour le moment à simuler l'appelle à une routine, ce qui permettra de donner plus de sens aux applications de nos analyses.
+La déclaration return servira pour le moment à simuler l'appel à une routine, ce qui permettra de donner plus de sens aux applications de nos analyses.
 Dans le reste de cette étude, on parlera également de déclaration en désignant un programme étant donné que les analyses statiques
-n'ont pas besoin d'évaluer la déclaration pour se construire. On notera aussi que la routine peut, pour le moment, être
+n'ont pas besoin d'évaluer la déclaration pour se construire. \pierre{Je ne comprends pas :}On notera aussi que la routine peut, pour le moment, être
 simplement vue comme la déclaration d'une boucle. Cela sera utile lors des travaux sur la réduction du code mort.
 \\
 \\
@@ -132,7 +137,7 @@ simplement vue comme la déclaration d'une boucle. Cela sera utile lors des trav
 	return c
 	\end{lstlisting}
 \end{example}
-L'implémentation de tout ce qui est spécifié dans ce document, est écrite en OCaml et est disponible sur le dépôt Git.
+L'implémentation de tout ce qui est spécifié dans ce document, est écrite en OCaml et est disponible sur le dépôt Git\pierre{mettre le lien en footnote}.
 
 \subsection{Arbre de syntaxe abstraite}
 De manière à construire nos programmes à partir de ce qui a été précédemment énoncé, il est nécessaire d'introduire 
@@ -140,12 +145,12 @@ l'arbre de syntaxe abstraite. Ce modèle de représentation permet de parcourir 
 quelle fonctions (dans notre cas les différents opérateurs arithmétiques, booléens, ou d'affectation). 
 Cela nous servira particulièrement lors des différentes analyses qui seront effectuées, et notamment l'analyse par flot de contrôle. 
 Cette dernière ne requièrant pas la connaissance de l'ordre d'exécution de la déclaration, les AST sont tout-à-fait adaptés.
-Voici un exemple d'AST sur notre langage.
+Voici \pierre{Où ?} un exemple d'AST sur notre langage.
 
 \section{Interpréteur et sémantique}
 Dans cette section, on s'atèle à décrire l'interpréteur ainsi que la sémantique sur notre petit langage impératif. Rappelons que
 $\mathbb{V}$ est l'ensemble des variables affectées dans un programme.
-Dans ce cadre là, on définit l'état d'un programme (sur la pile) par une application entre les identifiants de variables et leurs valeurs, 
+Dans ce cadre là, on définit l'état d'un programme (sur la pile \pierre{quelle pile?}) par une application entre les identifiants de variables et leurs valeurs, 
 dans notre cas, des entiers relatifs,
 \[\sigma : \mathbb{V} \longrightarrow \mathbb{Z}\]
 Pour la suite, on considèrera l'ensemble des états $\mathcal{S} = \mathbb{Z}^\mathbb{V}$.
@@ -155,14 +160,14 @@ Ces derniers décriront l'évolution de l'exécution du programme et nous permet
 Pour le moment, il n'est pas nécessaire d'implémenter un compilateur pour notre langage, un interpréteur suffira.
 Celui-ci servira notamment à valider les tests unitaires lorsque les premières analyses statiques seront appliquées
 à nos programmes.
-Sur les expressions arithmétiques, définies dans le section précédente, on pose l'application suivante,
+Sur les expressions arithmétiques, définies dans la section précédente, on pose l'application suivante,
 \begin{align*}
 	\intrfun{\arithexp}{A}:\mathcal{S}&\longrightarrow\mathbb{Z}\\
-	\intrfun{n}{A}:\sigma&\longmapsto n\\
-	\intrfun{x}{A}:\sigma&\longmapsto\sigma(x)\\
-	\intrfun{op_A(a_1, a_2)}{A}:\sigma&\longmapsto\hat{op}_A(\intr{a_1}{A}{\sigma}\text{, }\intr{a_2}{A}{\sigma})\\
+	\intrfun{n}{A}\sigma&\longmapsto n\\
+	\intrfun{x}{A}\sigma&\longmapsto\sigma(x)\\
+	\intrfun{op_A(a_1, a_2)}{A}\sigma&\longmapsto\hat{op}_A(\intr{a_1}{A}{\sigma}\text{, }\intr{a_2}{A}{\sigma})\\
 \end{align*}
-On définit $\mathbb{B} = \{0, 1\}$. De la même manière, on définit l'application qui suit sur les expressions booléennes,
+On définit $\mathbb{B} = \{0, 1\}$. De la même manière, on définit l'application qui suit sur les expressions booléennes, \pierre{Retirer les ``:'' comme j'ai fait au-dessus, dans toutes les définitions qui suivent.}
 \begin{align*}
 	\intrfun{\boolexp}{B}:\mathcal{S}&\longrightarrow\mathbb{B}\\	
 	\intrfun{\textbf{true}}{B}:\sigma&\longmapsto\top\\
@@ -208,7 +213,7 @@ On peut déclarer la règle qui suit pour la déclaration while,
 {\semanticd{\swhiledo{b}{s}}{\sigma}{\sseq{s}{\swhiledo{b}{s}}}{\sigma}}
 Enfin, pour l'opération return on donne la règle,
 \srule{ }{\semanticd{\sreturn{a}}{\sigma}{\emptyset}{\sigma}}
-\captionof{figure}{Sémantique}
+%\captionof{figure}{Sémantique}
 
 \section{Prérequis à l'analyse}
 De manière à pouvoir travailler avec les analyses de flot de données et de flot de contrôle, 
@@ -233,7 +238,7 @@ d'instructions comme un bloc à part entière, ce qui pourra dans certains cas l
 de contrôle.
 
 \subsection{Étiquettage}
-De manière à correctement travailler avec ces blocs, il faut avoir une information sur leur position relative, par rapport
+De manière à correctement travailler avec ces blocs, il faut avoir une information sur leur position relative par rapport
 aux autres blocs. Il est donc nécessaire de les coupler chacun à un identifiant unique. 
 On définit $\mathbb{L}\subseteq\mathbb{N}$ l'ensemble fini des étiquettes d'une déclaration. Introduisons l'application suivante,
 \[
@@ -291,11 +296,11 @@ Comme expliqué précédemment, il est aussi nécessaire de déclarer une foncti
 \\
 En voici quelques exemples,
 \begin{center}\input{cfg.fig}\end{center}
-\captionof{figure}{Graphe de flot de contrôle}
+%\captionof{figure}{Graphe de flot de contrôle}
 
 De manière à correctement identifier chaque bloc lors d'une analyse statique, il nous faut les lier à une étiquette
 unique. Pour ce faire, 
-on pose l'application $blocks$ définie par,
+on pose l'application $blocks$ définie par
 \begin{align*}
 	blocks : Stm &\longrightarrow \mathcal{P}(\mathbb{L} \times Block)\\
 	(\sassign{x}{a})^l&\longmapsto\{(l, x := a)\}\\
@@ -308,11 +313,12 @@ on pose l'application $blocks$ définie par,
 À partir de là, il est possible de formaliser les graphes orientés de flot. Comme dit précédemment, les blocs en représentent les noeuds, 
 et le passage vers le bloc suivant est formulé par un arc.
 
-Nous avons désormais toutes les structures nécéssaires à la construction de notre graphe de flot. Pour le moment, il s'agira de 
+Nous avons désormais toutes les structures nécessaires à la construction de notre graphe de flot. Pour le moment, il s'agira de 
 le construire naïvement, l'on reviendra plus tard sur les optimisations possibles. Ainsi, une manière simple de représenter ce 
 graphe est de considérer l'ensemble des couples d'étiquettes qui indiqueront un arc d'un bloc à un autre. 
 Considérons donc l'application suivante, 
 
+\pierre{You've changed the style definition compared to section 3.1}
 \begin{align*}
 	flow : Stm &\longrightarrow \mathcal{P}(\mathbb{L}^2) \\
 	\sassign{x}{a} &\longmapsto \emptyset \\
@@ -350,7 +356,7 @@ l'ensemble des identifiants de variables présentes dans une expression arithmé
 \[vars_b : \boolexp \longrightarrow \mathcal{P}(\mathbb{V})\]
 l'ensemble des identifiants de variables présentes dans une expression booléenne.
 \\
-Définissons maintenant la construction de ces deux ensembles à partir d'un bloc comme,
+Définissons maintenant la construction de ces deux ensembles à partir d'un bloc comme
 \begin{align*}
 	gen : Block &\longrightarrow \mathcal{P}(\mathbb{V})\\
 	\sassign{x}{a} &\longmapsto vars_a(a)\\
@@ -369,10 +375,10 @@ génère l'ensemble $\sgen{l}$ et,
 génère l'ensemble $\skill{l}$.
 \\
 \\
-Notre langage étant un langage impératif, il est par conséquent naturel d'effectuer cette analyse de bas en haut dans le parcours des déclarations,
+Notre langage étant un langage impératif, il est par conséquent naturel d'effectuer cette analyse de bas en haut\pierre{``bas en haut'' introduit inutilement de la confusion, il ne faut pas biaiser la lecture du rapport avec une orientation des règles : c'est un système d'équation, on s'en fiche de l'ordre de résolution} dans le parcours des déclarations,
 de manière à déterminer cette vivacité. Pour pouvoir donner forme à cette analyse, on déclare deux ensembles de variables vivantes à l'entrée, et à la
 sortie d'un bloc. Ils nous permettront par la suite de résoudre un système d'équation par itération et d'y trouver un point fixe. 
-On les définira comme tels,
+On les définira comme tels, \pierre{Il ne faut pas écrire $LIVE$ (l'espaçage est délirant) mais $\textit{LIVE}$ et donc définir une macro qui va bien.}
 
 \[
 	LIVE_{out}[l] = 
@@ -399,7 +405,7 @@ La finalité étant de trouver le point fixe minimal.
 
 \subsection{Monotonie}
 La monotonie des ensembles de flot de données nous permettra de garantir ou non que le point fixe déterminé par un
-algorithme est le point fixe minimal. 
+algorithme est le point fixe minimal. \pierre{il y a aussi (et surtout) la question de terminaison.}
 Cela sera donc utile pour prouver la terminaison des algorithmes, étant donné que l'ensemble des variables $\mathbb{V}$ d'une déclaration est supposé fini.
 \\
 \\
@@ -451,7 +457,7 @@ On se sert pour y parvenir du théorème du point fixe de Kleene.
 \begin{proof}
 	[admise]
 \end{proof}
-Commençons par établir un algorithme de point fixe naïf. Il s'agira simplement de recalculer l'entierté du système
+Commençons par établir un algorithme de point fixe naïf. Il s'agira simplement de recalculer l'entièreté du système
 d'équation à chaque itération, jusqu'à trouver le point fixe minimal (par le théorème de Kleene).
 
 \begin{algorithm}[H]
@@ -481,7 +487,7 @@ En outre, une amélioration peut être simplement faite sur l'algorithme décrit
 modification effective de $\liveout{\cdot}$, seuls les blocs prédecesseurs seront susceptibles de s'altérer. Cela
 vient du fait que l'analyse se fait de bas en haut. Donc
 au lieu d'itérer à nouveau sur l'ensemble des blocs, il suffit d'itérer uniquement sur les blocs, prédecesseurs au dernier
-bloc altéré. L'on décrira ce second algorithme plus bas dans la section.
+bloc altéré. L'on décrira ce second algorithme plus bas dans la section. \pierre{Parler de ``work-list algorithm'' / ``Kildall algorithm''}
 \\
 \\
 \begin{lemma}
@@ -688,7 +694,7 @@ qui se rappelle récursivement, en utilisant la précédente analyse pour rédui
 Cependant, si on considère $s \in Stm$, $\mu_s$ son point fixe minimal et $s' = \reduced{s}{\mathcal{L}}{\sskip}$ cette même déclaration
 réduite, alors il n'est pas possible d'utiliser l'analyse de vivacité de $s$ pour poursuivre la réduction, étant donné qu'on ne peut pas garantir que
 $\mu_{s} \subseteq \mu_{s'}$ et que, comme démontré plus haut, la recherche de point fixe est croissante monotone uniquement. 
-Il s'agit donc de trouver un moyen de suffisament décroître le précédent treillis pour obtenir un pré-point fixe, qu'on pourra alors itérer et obtenir
+Il s'agit donc de trouver un moyen de suffisamment décroître le précédent treillis pour obtenir un pré-point fixe, qu'on pourra alors itérer et obtenir
 le point fixe minimal.
 Pour ce faire, on peut introduire un ensemble $\filterset$ qui agit comme un filtre de manière à supprimer l'information en trop. 
 Pour convenablement filtrer le treillis de $s$, il faut ajouter de l'information à cette dernière. 
@@ -781,7 +787,7 @@ et sur la variable. Une fois cela acquis, il est possible d'énoncer le théorè
 		\sassign{x}{a} &\longmapsto \mathbb{L} \times \{x\}\\
 		\sskip &\longmapsto \emptyset\\
 		b &\longmapsto \emptyset\\
-		(l, \sreturn{a}) &\longmapsto \emptyset
+		\sreturn{a} &\longmapsto \emptyset
 	\end{align*}
 	génère maintenant l'ensemble $\skill{l}$.
 	\\ 
@@ -819,7 +825,7 @@ et sur la variable. Une fois cela acquis, il est possible d'énoncer le théorè
 	On considère $Z = (Z_l)_{l\in \mathbb{L}}$ le plus petit point fixe de la déclaration $s$ \textit{i.e.} la plus petite solution du système $E_s$.
 	Montrons d'abord que $\forall X = (X_l)_{l\in \mathbb{L}}$ solution de $E_{s'}$ alors,
 	\[Z_k - \filterset \subseteq X_k, \forall k \in \mathcal{L}\]
-	D'après la définition de $gen$ sur ce treillis il vient que $\sgen{k} \subseteq I_{\mathcal{L}}$, donc on a
+	D'après la définition de $gen$ sur ce treillis, il vient que $\sgen{k} \subseteq I_{\mathcal{L}}$ donc on a
 	\[Z_k - \filterset = g(Z_k) - (\skill{k} - \{(k, v) \mid v \in \mathbb{V}\}) \subseteq g(Z_k) \subseteq g(X_k) = X_k\]
 	comme on suppose $Z$ la plus petite solution du système $E_s$.
 	Montrons ensuite que $\forall X = (X_l)_{l\in \mathbb{L}}$ solution de $E_{s'}$ on a,
@@ -982,7 +988,7 @@ Le compilateur GCC produit alors le code assembleur suivant,
 \end{lstlisting}
 On suppose désormais que cette fonction sera appelée dans une boucle, à ne traiter que des entiers signés sur 32 bits, positifs.
 Alors ce code assembleur devient particulièrement inefficace étant donné qu'il considère le cas d'entiers
-négatifs. En effet, on aimerait plutôt avoir quelque chose comme,
+négatifs. En effet, on aimerait plutôt avoir quelque chose comme,\pierre{je ne suis pas convaincu par ces virgules avant un bout de code}
 \begin{lstlisting}[tabsize=2]
 	div:
 		mov     eax, DWORD PTR [rbp-4]
@@ -992,9 +998,12 @@ négatifs. En effet, on aimerait plutôt avoir quelque chose comme,
 ce qui est déjà bien mieux! On pourrait donc dans ce cas poser notre meta-langage sur l'appel de \textit{div}, avec un prédicat
 défini par,
 \[P : v \longmapsto \intrfun{v > 0 \vee v = 0}{B}(\sigma)\]
-où $\sigma$ est l'état de nos variables sur la pile. Cela donnerait l'hypothèse d'un entier positif à la pré-compilation
+où $\sigma$ est l'état de nos variables. Cela donnerait l'hypothèse d'un entier positif à la pré-compilation
 et permettrait d'obtenir ce code assembleur spécifiquement.
 \subsection{Première approche}
+
+\pierre{Not sure about that but this cannot hurt:}
+
 Entamons cette généralisation en partant d'équations similaires à celles de l'analyse de vivacité.
 On remarque en effet que pour toute sorte d'analyses statiques, on retrouvera toujours l'opérateur $\sqcup$
 sur les blocs successeurs ou prédecesseurs. Définissons donc une fonction de transfert $t_l$ au bloc d'étiquette $l$
