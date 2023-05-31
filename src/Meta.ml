@@ -31,7 +31,7 @@ let rec iterative_reduction prefix stm suffix analysis =
   match stm with
   | Assign t as assign ->
       let id, _ = t.cnt in
-      if Vars.mem (t.label, id) (LabelMap.find t.label lout) then
+      if Vars.exists (fun (_, e) -> e = id) (LabelMap.find t.label lout) then
         (analysis, assign)
       else (dataflow_filter t.label analysis, Syntax.skip ~l:t.label ())
   (*
@@ -83,7 +83,7 @@ let rec reduction stm lv_analysis =
   match stm with
   | Assign t ->
       let id, _ = t.cnt in
-      if Vars.mem (t.label, id) (LabelMap.find t.label lv_analysis) then
+      if Vars.exists (fun (_, e) -> e = id) (LabelMap.find t.label lv_analysis) then
         Assign t
       else Syntax.skip ~l:t.label ()
   | Seq (s_1, s_2) ->
