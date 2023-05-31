@@ -1,0 +1,488 @@
+\documentclass{beamer}
+\usepackage[francais]{babel}
+\usepackage{tabularx}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{graphicx}
+\usepackage{caption}
+\usepackage{listings}
+\usepackage{mathtools}
+\usepackage{tikz}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usetheme{Warsaw}
+\useinnertheme{rectangles}
+\mode<presentation>
+
+\title{Minigloca}
+\author{Vladislas de Haldat}
+
+\begin{document}
+\include{doc-macros.tex}
+\begin{frame}
+	\titlepage
+\end{frame}
+
+\begin{frame}{Index}
+	\tableofcontents
+\end{frame}
+
+\section{Définition du langage}
+\subsection{Expressions arithmétiques et booléennes}
+\begin{frame}
+	\frametitle{Expressions arithmétique et booléenne}
+	\begin{align*}
+  		a & ::= n & n \in \mathbb{Z}\\
+		&\mid x & x \in \mathbb{V}\\
+		&\mid op_A(a_1, a_2) & op_A \in \{+, -, \times\}
+	\end{align*}
+	\begin{dtype}{\boolexp}
+		\inlinekind{\textbf{true}}
+		\kind{\textbf{false}}\\
+		\akind{op_R (a_1, a_2)}\with{op_R\in\{<, =\}}
+		\akind{op_B (b_1, b_2)}\with{op_B\in\{\wedge, \vee\}}
+		\akind{\neg{b}}
+	  \end{dtype}
+\end{frame}
+
+\subsection{Déclarations}
+\begin{frame}{Déclarations}
+	\begin{dtype}{Stm}
+		\inlinekind{\sassign{x}{a}}\\
+		\akind{\sseq{s_1}{s_2}}\\
+		\akind{\sskip}\\
+		\akind{\sifthenelse{b}{s_1}{s_2}}\\
+		\akind{\swhiledo{b}{s}}\\
+		\akind{\sreturn{a}}
+	  \end{dtype}
+\end{frame}
+
+\defverbatim[colored]{\lst}{
+	\begin{lstlisting}[language=caml, tabsize=2, basicstyle=\ttfamily,keywordstyle=\color{blue}]
+		a := 1;
+		b := 20;
+		if a = 3 then
+			c := 4
+		else
+			c := 6
+		endif;
+		while b < 100 do
+			a := b + 1
+		done;
+		return c
+	\end{lstlisting}
+}
+\begin{frame}{Exemple}
+	\lst
+\end{frame}
+
+\section{Prérequis à l'analyse}
+\subsection{Blocs}
+\begin{frame}{Blocs}
+	\begin{dtype}{Block}
+		\inlinekind{\sassign{x}{a}}\\
+		\akind{b}\\
+		\akind{\sskip}\\
+		\akind{\sreturn{a}}
+	\end{dtype}
+	\begin{block}{Notation}
+		Si $s \in Stm$ et $l = \lambda(s)$ alors on notera $s^l \in Stm$ la déclaration munie d'une étiquette.
+	\end{block}
+\end{frame}
+
+\subsection{Graphe de flot de contrôle}
+\begin{frame}{Graphe de flot de contrôle}
+	\begin{center}
+		\input{cfg.fig}
+	\end{center}
+\end{frame}
+
+\section{Analyse de vivacité}
+\subsection{Description ensembliste}
+\begin{frame}{Description ensembliste}
+	\begin{block}{Définition}
+		Soient les applications
+		\[vars_a : \arithexp \longrightarrow \mathcal{P}(\mathbb{V})\]
+		\[vars_b : \boolexp \longrightarrow \mathcal{P}(\mathbb{V})\]
+		Les ensembles de variables présentes dans les expressions arithmétique et booléenne.
+	\end{block}
+\end{frame}
+
+\begin{frame}{Description ensembliste}
+	\begin{block}{Définition}
+		Soit l'application
+		\begin{align*}
+			gen : Block &\longrightarrow \mathcal{P}(\mathbb{V})\\
+			\sassign{x}{a} &\longmapsto vars_a(a)\\
+			\sskip &\longmapsto \emptyset\\
+			b &\longmapsto vars_b(b)\\
+			\sreturn{a} &\longmapsto vars_a(a)
+		\end{align*}
+	\end{block}
+\end{frame}
+
+\begin{frame}{Description ensembliste}
+	\begin{block}{Définition}
+		Soit l'application
+		\begin{align*}
+			kill : Block &\longrightarrow \mathcal{P}(\mathbb{V})\\
+			\sassign{x}{a} &\longmapsto \{x\}\\
+			\sskip &\longmapsto \emptyset\\
+			b &\longmapsto \emptyset\\
+			\sreturn{a} &\longmapsto \emptyset
+		\end{align*}
+	\end{block}
+\end{frame}
+
+\begin{frame}{Description ensembliste}
+	\begin{block}{Définition}
+		Soient les ensembles
+		\begin{align*}
+			\livein{l} &= \sgen{l} \cup (\liveout{l} - \skill{l}),\\
+			\liveout{l} &= 
+			\begin{dcases*}
+			\emptyset &si $succ(l) = \emptyset $\,, \\
+			\bigcup\limits_{p\in succ(s)} \livein{p} &sinon\,.
+			\end{dcases*}
+		\end{align*}
+	\end{block}
+\end{frame}
+
+\subsection{Point fixe}
+\begin{frame}{Point fixe}
+	\begin{block}{Théorème (Kleene)}
+		Soit $(L, \sqsubseteq)$ un ordre partiellement ordonné, avec un plus petit élément  $\perp$ et soit
+		une application $f : L \longrightarrow L$ monotone. Alors il existe un point fixe minimal qui est le suprémum de la suite,
+		\[\perp \sqsubseteq f(\perp) \sqsubseteq f^2(\perp) \sqsubseteq \cdots \sqsubseteq f^k(\perp) \sqsubseteq \cdots\]
+	\end{block}	
+\end{frame}
+
+\begin{frame}{Algorithme}
+	\begin{algorithmic}
+		\State {Soit $s$ la déclaration}
+		\State $\mathcal{B} \leftarrow blocks(s)$
+		\State {Soit $\mathbb{L}$ l'ensemble des étiquettes de $\mathcal{B}$}
+		\For{$l \in \mathbb{L}$}
+		\State $live_{in}[l] \leftarrow \emptyset$
+		\State $live_{out}[l] \leftarrow \emptyset$
+		\EndFor
+		\While{$live_{in} \ne live_{in}' \textbf{ ou } live_{out} \ne live_{out}'$}
+		\For{$l \in L$}
+		\State $live_{out}[l] \leftarrow \bigcup\limits_{p\in succ(l)} live_{in}[p]$
+		\State $live_{in}[l] \leftarrow \sgen{l} \cup (live_{out}[l] - \skill{l})$
+		\EndFor
+		\EndWhile
+	\end{algorithmic}
+\end{frame}
+
+\defverbatim[colored]{\lst}{
+	\begin{lstlisting}[language=caml, tabsize=2, basicstyle=\ttfamily,keywordstyle=\color{blue}]
+		a := 0;						// empty		{a}
+		b := a;						// {a}			{a, b}
+		while a < 100 do	// {a, b}		{a, b}
+			if a = 2 then		// {a, b}		{a, b}
+				c := a				// {a, b}		{b, c}
+			else
+				c := 2 * a;		// {a, b}		{b, c}
+				d := b				// {b, c}		{b, c}
+			endif;
+			a := c + 1			// {b, c}		{a, b, c}
+		done;						
+		return c					// {c}			empty
+	\end{lstlisting}
+}
+\begin{frame}{Exemple}
+	\lst
+\end{frame}
+
+\section{Élimination de code mort}
+\subsection{Réduction naïve}
+\begin{frame}{Réduction naïve}
+	\begin{block}{Définition}
+		Soit $(x := a)^l$ un bloc d'affectation où $x \in \mathbb{V}$ et $l \in \mathbb{L}$. Si $x \notin \liveout{l}$, on dit que la variable $x$ est morte.
+	\end{block}
+	\begin{block}{Approche}
+		Notons $\mathcal{A} = \mathcal{P}(\mathbb{V})^2$ et soit l'application
+		\[\Delta : \mathcal{A} \times Stm \longrightarrow Stm\]
+		On recalcule l'analyse à partir de $\bot$.
+	\end{block}
+\end{frame}
+
+\begin{frame}{Exemple}
+	\lst
+\end{frame}
+
+\defverbatim[colored]{\lst}{
+	\begin{lstlisting}[language=caml, tabsize=2, basicstyle=\ttfamily,keywordstyle=\color{blue}]
+		a := 0;						// empty	{a}
+		b := a;						// {a}		{a}
+		while a < 100 do	// {a}		{a}
+			if a = 2 then		// {a}		{a}
+				c := a				// {a}		{c}
+			else
+				c := 2 * a;		// {a}		{c}
+				skip					// {c}		{c}
+			endif;
+			a := c + 1			// {c}		{a, c}
+		done;						
+		return c					// {c}		empty
+	\end{lstlisting}
+}
+\begin{frame}{Exemple}
+	\lst
+\end{frame}
+
+\defverbatim[colored]{\lst}{
+	\begin{lstlisting}[language=caml, tabsize=2, basicstyle=\ttfamily,keywordstyle=\color{blue}]
+		a := 0;						// empty	{a}
+		skip;							// {a}		{a}
+		while a < 100 do	// {a}		{a}
+			if a = 2 then		// {a}		{a}
+				c := a				// {a}		{c}
+			else
+				c := 2 * a;		// {a}		{c}
+				skip					// {c}		{c}
+			endif;
+			a := c + 1			// {c}		{a, c}
+		done;						
+		return c					// {c}		empty
+	\end{lstlisting}
+}
+\begin{frame}{Exemple}
+	\lst
+\end{frame}
+
+\subsection{Incrémentalisation}
+\begin{frame}{Incrémentalisation}
+	\begin{itemize}
+		\item Mal optimisé : calcul d'un point fixe à partir de $\bot$ à chaque itération
+		\item Est-il possible de réutiliser la précédente analyse ?
+		\item La monotonie sera-t-elle conservée ?
+	\end{itemize}
+\end{frame}
+
+\defverbatim[colored]{\lst}{
+	\begin{lstlisting}[language=caml, tabsize=2, basicstyle=\ttfamily,keywordstyle=\color{blue}]
+		a := 0;						// empty		{a}
+		b := a + 1;				// {a}			{a, b}
+		c := 2 * b;				// {a, b}		{a}
+		return a					// {a}			empty
+	\end{lstlisting}
+}
+\begin{frame}{Exemple}
+	\lst
+\end{frame}
+
+\defverbatim[colored]{\lst}{
+	\begin{lstlisting}[language=caml, tabsize=2, basicstyle=\ttfamily,keywordstyle=\color{blue}]
+		a := 0;						// empty	{a}
+		b := a + 1;				// {a}		{a}
+		skip;							// {a}		{a}
+		return a					// {a}		empty
+	\end{lstlisting}
+}
+\begin{frame}{Exemple}
+	\lst
+	\begin{block}{Remarque}
+		Cette analyse de vivacité est plus petite que la précédente, on perd la monotonie!
+	\end{block}
+\end{frame}
+
+\begin{frame}{Incrémentalisation}
+	\begin{itemize}
+		\item Perte de la monotonie en prenant l'analyse précédente.
+		\item Il faut alors pouvoir la réduire suffisament.
+		\item Est-il possible d'y appliquer un filtre ?
+	\end{itemize}
+\end{frame}
+
+\defverbatim[colored]{\lst}{
+	\begin{lstlisting}[language=caml, tabsize=2, basicstyle=\small,keywordstyle=\color{blue}]
+		a := 0;						// empty		{a}
+		b := a;						// {a}			{a, b}
+		b := b + 3;				// {a, b}		{a, b}
+		while a < 100 do	// {a, b}		{a, b}
+			if a = 2 then		// {a, b}		{a, b}
+				c := a;				// {a, b}		{b, c}
+				d := b				// {b, c}		{b, c}
+			else
+				c := 2 * a;		// {a, b}		{b, c}
+				e := b				// {b, c}		{b, c}
+			endif;
+			a := c + 1			// {b, c}		{a, b, c}
+		done;
+		return c					// {c}			empty
+	\end{lstlisting}
+}
+\begin{frame}{Exemple}
+	\lst
+\end{frame}
+
+\defverbatim[colored]{\lst}{
+	\begin{lstlisting}[language=caml, tabsize=2, basicstyle=\small,keywordstyle=\color{blue}, escapeinside={(*}{*)}]
+		a := 0;						// empty	{(*$a_4,a_5,a_6,a_8$*)}
+		b := a;						// {(*$a_4,a_5,a_6,a_8$*)}	{(*$a_4,a_5,a_6,a_8,b_3$*)}
+		b := b + 3;				// {(*$a_4,a_5,a_6,a_8,b_3$*)}	{(*$a_4,a_5,a_6,a_8,b_7,b_9$*)}
+		while a < 100 do	// {(*$a_4,a_5,a_6,a_8,b_7,b_9$*)}	{(*$a_5,a_6,a_8,b_7,b_9$*)}
+			if a = 2 then		// {(*$a_5,a_6,a_8,b_7,b_9$*)}	{(*$a_6,a_8,b_7,b_9$*)}
+				c := a;				// {(*$a_6,b_7,b_9$*)}	{(*$b_7,b_9,c_{10},c_{11}$*)}
+				d := b				// {(*$b_7,b_9,c_{10},c_{11}$*)}	{(*$b_7,b_9,c_{10},c_{11}$*)}
+			else
+				c := 2 * a;		// {(*$a_8,b_7,b_9$*)}	{(*$b_7,b_9,c_{10},c_{11}$*)}
+				e := b				// {(*$b_7,b_9,c_{10},c_{11}$*)}	{(*$b_7,b_9,c_{10},c_{11}$*)}
+			endif;
+			a := c + 1			// {(*$b_7,b_9,c_{10},c_{11}$*)}	{(*$a_4,a_5,a_6,a_8,b_7,b_9,c_{11}$*)}
+		done;
+		return c					// {(*$c_{11}$*)}	empty
+	\end{lstlisting}
+}
+\begin{frame}{Exemple}
+	\lst
+\end{frame}
+
+\begin{frame}{Incrémentalisation}
+	On travaille désormais sur le treillis $(\mathcal{P}(\mathbb{L}\times\mathbb{V}), \subseteq)$.
+	\begin{block}{Notation}
+		\[
+			\mathcal{L} = \{l \in \mathbb{L} \mid (x := a)^l \text{ et } \{x\} \notin \liveout{l}\}	
+		\]
+		Si $s \in Stm$ une déclaration, on notera $\reduced{s}{\mathcal{L}}{\sskip}$ cette même déclaration, 
+		réduite aux blocs d'étiquette dans $\mathcal{L}$.
+	\end{block}
+\end{frame}
+
+\begin{frame}{Incrémentalisation}
+	On redéfinit l'analyse sur ce treillis.
+	\begin{align*}
+		gen : \mathbb{L} \times Block &\longrightarrow \mathcal{P}(\mathbb{L} \times \mathbb{V})\\
+		(l, \sassign{x}{a}) &\longmapsto vars_a(l, a)\\
+		(l, \sskip) &\longmapsto \emptyset\\
+		(l, b) &\longmapsto vars_b(l, b)\\
+		(l, \sreturn{a}) &\longmapsto vars_a(l, a)
+	\end{align*}
+\end{frame}
+
+\begin{frame}{Incrémentalisation}
+	\begin{align*}
+		kill : Block &\longrightarrow \mathcal{P}(\mathbb{L} \times \mathbb{V})\\
+		\sassign{x}{a} &\longmapsto \mathbb{L} \times \{x\}\\
+		\sskip &\longmapsto \emptyset\\
+		b &\longmapsto \emptyset\\
+		\sreturn{a} &\longmapsto \emptyset
+	\end{align*}
+\end{frame}
+
+\begin{frame}{Incrémentalisation}
+	\begin{block}{Théorème}
+		Soient $s \in Stm$, et $s' = \reduced{s}{\mathcal{L}}{\sskip}$ une réduction sur
+	l'ensemble d'étiquettes $\mathcal{L}$. Soient $\mu_s$ et $\mu_{s'}$ les point fixes minimaux respectifs
+	des deux déclarations.
+	Alors il existe $\filterset$ tel que $\forall l \in \mathbb{L}$,
+	\[
+		\mu_s[l] - \filterset \subseteq \mu_{s'}[l]
+	\]
+	est un pré-point fixe de $\mu_{s'}[l]$.
+	\end{block}
+	\begin{block}{Remarque}
+		On prendra $\filterset = \mathcal{L}\times\mathbb{V}$
+	\end{block}
+\end{frame}
+
+\defverbatim[colored]{\lst}{
+	\begin{lstlisting}[language=caml, tabsize=2, basicstyle=\ttfamily,keywordstyle=\color{blue},escapeinside={(*}{*)}]
+		a := 0;						// empty		{(*$a_2,a_4$*)}
+		b := a + 1;				// {(*$a_2,a_4$*)}		{(*$a_4,b_3$*)}
+		c := 2 * b;				// {(*$a_4, b_3$*)}		{(*$a_4$*)}
+		return a					// {(*$a_4$*)}			empty
+	\end{lstlisting}
+}
+\begin{frame}{Exemple}
+	Reprenons le premier exemple:
+	\lst
+	\begin{block}{Remarque}
+		$\forall l \in \mathbb{L}$ on a $(l, c) \notin \{(4, a)\}$ donc $c$ est morte.
+	\end{block}
+\end{frame}
+
+\defverbatim[colored]{\lst}{
+	\begin{lstlisting}[language=caml, tabsize=2, basicstyle=\ttfamily,keywordstyle=\color{blue},escapeinside={(*}{*)}]
+		a := 0;						// empty		{(*$a_2,a_4$*)}
+		b := a + 1;				// {(*$a_2,a_4$*)}		{(*$a_4$*)}
+		skip;							// {(*$a_4$*)}			{(*$a_4$*)}
+		return a					// {(*$a_4$*)}			empty
+	\end{lstlisting}
+}
+\begin{frame}{Exemple}
+	\lst
+\end{frame}
+
+\defverbatim[colored]{\lst}{
+	\begin{lstlisting}[language=caml, tabsize=2, basicstyle=\ttfamily,keywordstyle=\color{blue},escapeinside={(*}{*)}]
+		a := 0;						// empty		{(*$a_4$*)}
+		skip;							// {(*$a_4$*)}			{(*$a_4$*)}
+		skip;							// {(*$a_4$*)}			{(*$a_4$*)}
+		return a					// {(*$a_4$*)}			empty
+	\end{lstlisting}
+}
+\begin{frame}{Exemple}
+	\lst
+\end{frame}
+
+\defverbatim[colored]{\lst}{
+	\begin{lstlisting}[language=caml, tabsize=2, basicstyle=\ttfamily,keywordstyle=\color{blue},escapeinside={(*}{*)}]
+		a := 0;		
+		#if (*$\{b\}\in\livein{3}$*)			
+			b := a + 1;
+		#if (*$\{c\}\in\livein{4}$*)	
+			c := 2 * b;	
+		return a
+	\end{lstlisting}
+}
+\section{Généralisation}
+\begin{frame}{Généralisation}
+	Avec un prédicat sur la vivacité des variables.
+	\lst
+\end{frame}
+
+\defverbatim[colored]{\lst}{
+	\begin{lstlisting}[language=c, tabsize=2, basicstyle=\ttfamily,keywordstyle=\color{blue},escapeinside={(*}{*)}]
+		int div(int x)
+		{
+			return x/32;
+		}
+	\end{lstlisting}
+}
+\defverbatim[colored]{\lsta}{
+	\begin{lstlisting}[tabsize=2, basicstyle=\ttfamily,keywordstyle=\color{blue},escapeinside={(*}{*)}]
+		div:
+			mov     eax, DWORD PTR [rbp-4]
+			lea     edx, [rax+31]
+			test    eax, eax
+			cmovs   eax, edx
+			sar     eax, 5
+			ret
+	\end{lstlisting}
+}
+\begin{frame}{Généralisation}
+	Considérons le programme
+	\lst
+	Son code assembleur, produit par GCC
+	\lsta
+\end{frame}
+
+\defverbatim[colored]{\lsta}{
+	\begin{lstlisting}[tabsize=2, basicstyle=\ttfamily,keywordstyle=\color{blue},escapeinside={(*}{*)}]
+		div:
+			mov     eax, DWORD PTR [rbp-4]
+			shr     eax, 5
+			ret
+	\end{lstlisting}
+}
+\begin{frame}{Généralisation}
+	En supposant l'entier toujours positif
+	\lsta
+	Posons alors le prédicat
+	\[P : v \longmapsto \intrfun{v > 0 \vee v = 0}{B}(\sigma)\]
+\end{frame}
+
+\end{document}

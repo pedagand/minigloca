@@ -8,6 +8,14 @@ type a =
   | Times of a * a
 [@@deriving show, eq]
 
+let rec show_a_gloca a =
+  match a with
+  | Int i -> string_of_int i
+  | Id s -> s
+  | Plus (a_1, a_2) -> show_a_gloca a_1 ^ " + " ^ show_a_gloca a_2
+  | Minus (a_1, a_2) -> show_a_gloca a_1 ^ " - " ^ show_a_gloca a_2
+  | Times (a_1, a_2) -> show_a_gloca a_1 ^ " * " ^ show_a_gloca a_2
+
 (* Boolean expressions *)
 
 type b =
@@ -19,6 +27,16 @@ type b =
   | Or of b * b
   | Not of b
 [@@deriving show, eq]
+
+let rec show_b_gloca b =
+  match b with
+  | True -> "true"
+  | False -> "false"
+  | Lt (a_1, a_2) -> show_a_gloca a_1 ^ " < " ^ show_a_gloca a_2
+  | Eq (a_1, a_2) -> show_a_gloca a_1 ^ " = " ^ show_a_gloca a_2
+  | And (b_1, b_2) -> show_b_gloca b_1 ^ " & " ^ show_b_gloca b_2
+  | Or (b_1, b_2) -> show_b_gloca b_1 ^ " | " ^ show_b_gloca b_2
+  | Not b -> "not " ^ show_b_gloca b
 
 (* Statements *)
 
@@ -34,6 +52,19 @@ type s =
   | While of b labelled * s
   | Skip of unit labelled
 [@@deriving show, eq]
+
+let rec show_s_gloca stm =
+  match stm with
+  | Assign l ->
+      let s, v = l.cnt in
+      s ^ " := " ^ show_a_gloca v
+  | Seq (s_1, s_2) -> show_s_gloca s_1 ^ ";\n" ^ show_s_gloca s_2
+  | Ifte (l, s_1, s_2) ->
+      "if " ^ show_b_gloca l.cnt ^ " then\n" ^ show_s_gloca s_1 ^ "\nelse\n"
+      ^ show_s_gloca s_2 ^ "\nendif"
+  | While (l, s) ->
+      "while " ^ show_b_gloca l.cnt ^ " do\n" ^ show_s_gloca s ^ "\ndone"
+  | Skip l -> "()"
 
 let fl = ref 0
 
