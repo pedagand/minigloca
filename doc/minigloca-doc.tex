@@ -37,7 +37,7 @@
 
 \begin{document}
 
-\include{doc-macros.tex}
+\include{doc-macros}
 
 \maketitle
 \newpage
@@ -810,35 +810,87 @@ et sur la variable. Une fois cela acquis, il est possible d'énoncer le théorè
 		\livein{k} = g(\livein{k}) &$\forall k \in \mathcal{L}$\,.
 	\end{dcases*}
 	\]
-	Posons enfin, l'ensemble filtre tel que,
+	Posons l'ensemble filtre tel que,
 	\[
 		\filterset = \mathcal{L} \times \mathbb{V}
 	\]
+	Posons enfin la fonction intermédiaire
+	\begin{align*}
+	h : \mathcal{P}(\mathbb{L} \times \mathbb{V}) &\longrightarrow \mathcal{P}(\mathbb{L} \times \mathbb{V})\\
+	X_l &\longmapsto f(X_l) - \filterset
+	\end{align*}
+	Comme $f$ est monotone croissante, $h$ l'est aussi.
+	\\
+
+	\noindent
+	Prouvons que h est continue.
+	\\
+	Soit $D$ une chaîne dirigée de $\mathcal{P}(\mathbb{L} \times \mathbb{V})$.
+	Comme $h$ est monotone croissante, $h(D)$ est aussi dirigée.
+	\\
+	Puis, comme $\mathcal{P}(\mathbb{L} \times \mathbb{V})$ est un treillis fini, c'est un ordre partiel complet qui respecte la condition de la chaîne ascendante.
+	\\
+	Alors,
+	\begin{align*}
+		\exists n \in \mathbb{N},\ &D_n = sup(h(D)) \\
+		\exists m \in \mathbb{N},\ &D_m = sup(D)
+	\end{align*}
+	Or, $D_{m+n} = D_m = sup(D)$ par définition du sup d'une chaîne dirigée.
+	\\
+	Et de même $h(D_{m+n}) = h(D_n) = sup(h(D))$.
+	\\
+	On a donc bien $h(sup(D)) = h(D_{m+n}) = sup(h(D))$, et h est continue.
+	\\
+
+	\noindent
+	Prouvons maintenant par induction que pour tout $n \in \mathbb{N}$, 
+	\[h^n(\bot) = f^n(\bot) - \filterset\]
+	On a pour le cas $n=0$, $h^0(\bot) = \bot = \emptyset = f^0(D) - \filterset$
+	\\
+	Soit $n \in \mathbb{N}^+$ tel que $h^{n-1}(\bot) = f^{n-1}(\bot) - \filterset$.
+	Alors, 
+	\begin{align*}
+		h^n(\bot) &= f(h^{n-1}(\bot)) - \filterset\\
+		&= [\sgen{l} \cup (g(h^{n-1}(\bot)) - \skill{l})] - \filterset\\
+		\text{Par hypothèse d'induction} &= [\sgen{l} \cup (g(f^{n-1}(\bot) - \filterset) - \skill{l})] - \filterset \\
+		\text{Par union de différences} &= [\sgen{l} \cup (g(f^{n-1}(\bot)) - \filterset - \skill{l})] - \filterset \\
+		&= [\sgen{l} \cup (g(f^{n-1}(\bot)) - \skill{l})] - \filterset \\
+		&= f^n(\bot) - \filterset
+	\end{align*}
+	Prouvons que $\mu{}h = \mu{}f - \filterset$.
+	\\
+	On sait pas le théorème des points fixes de Kleene que
+	\\
+	$\mu{}h = \bigsqcup_{n}h^n(\bot)$ et $\mu{}f = \bigsqcup_{n}f^n(\bot)$.
+	\\
+	On a alors 
+	\begin{align*}
+		\mu{}h = \bigsqcup_{n}h^n(\bot) &= \bigsqcup_{n}(f^n(\bot) - \filterset)\\
+		&= (\bigsqcup_{n}f^n(\bot)) - \filterset = \mu{}f
+	\end{align*}
+
 	On considère $Z = (Z_l)_{l\in \mathbb{L}}$ le plus petit point fixe de la déclaration $s$ \textit{i.e.} la plus petite solution du système $E_s$.
-	Montrons d'abord que $\forall X = (X_l)_{l\in \mathbb{L}}$ solution de $E_{s'}$ alors,
-	\[Z_k - \filterset \subseteq X_k, \forall k \in \mathcal{L}\]
-	D'après la définition de $gen$ sur ce treillis il vient que $\sgen{k} \subseteq I_{\mathcal{L}}$ donc on a
-	\[Z_k - \filterset = g(Z_k) - (\skill{k} - \{(k, v) \mid v \in \mathbb{V}\}) \subseteq g(Z_k) \subseteq g(X_k) = X_k\]
-	comme on suppose $Z$ la plus petite solution du système $E_s$.
-	Montrons ensuite que $\forall X = (X_l)_{l\in \mathbb{L}}$ solution de $E_{s'}$ on a,
-	\[
-		Z_l - \filterset \subseteq X_l, \forall l \in \mathbb{L} - \mathcal{L}
-	\]
-	Dans ce cas, on remarque que 
-	\[Z_l - X_l \subseteq Z_l \cap \filterset\] 
-	mais aussi que, 
-	\[X_l - Z_l \subseteq \mathcal{U} = \bigcup\limits_{k\in \mathcal{L}} g(X_k) \cap \skill{k}\]
-	et ainsi que,
-	\[g(Z_l) - I_{\mathcal{L}} \subseteq g(X_l)\]
-	Donc on obtient que,
-	\[
-		Z_l - \filterset \subseteq \sgen{l} \cup (g(X_l) - \mathcal{U} - \skill{l}) \subseteq f(X_l) = X_l
-	\]
-	Étant donné que $[g(X_l) - \mathcal{U}] \cap \filterset = \emptyset$ il n'est pas nécessaire de retirer à $\skill{l}$ les possibles
-	éléments dans $\mathcal{L}$.
-	Donc pour tout $X$ solution du système $E_{s'}$ et pour tout $l \in \mathbb{L}$, on a montré que $Z_l - \filterset \subseteq X_l$ .
-	La différence ensembliste étant monotone décroissante, on a bien que la différence de $\filterset$ à $Z$
-	est un pré-point fixe de $\mu_{s'}$, la plus petite solution de $E_{s'}$.
+	Montons que $Z_k - \filterset$ est un pré-point fixe de $E_{s'}$\\
+	Pour cela, montrons que $\forall X = (X_l)_{l\in \mathbb{L}}$ solution de $E_{s'}$ alors,
+	\[Z_l - \filterset \subseteq X_l, \forall l \in \mathbb{L}\]
+
+	Si $l \in \mathbb{L} -  \mathcal{L}$, alors 
+	\[h(X_l) = f(X_l) - \filterset = X_l - \filterset \subseteq X_l\]
+	Si $l \in \mathcal{L}$, alors
+	\begin{align*}
+		h(X_l) &= f(X_l) - \filterset\\
+		&= [\sgen{l} \cup (g(X_l) - \skill{l})] - \filterset\\
+		&= [\sgen{l} - \filterset] \cup [(g(X_l) - \skill{l}) - \filterset]\\
+		&= (g(X_l) - \skill{l}) - \filterset \text{ car }l \in \mathcal{L}\\
+		&= (X_l - \skill{l}) - \filterset\\
+		&\subseteq X_l
+	\end{align*}
+	Ainsi, $h(X) \subset X$, H est un pré-point fixe de h.
+	Or, par le théorème de Knaster-Tarski, comme $\mathcal{P}(\mathbb{L} \times \mathbb{V})$ est un treilli complet, et que $h$ est monotone, $\mu{}h$ est le plus petit pré-point fixe de $h$.\\
+	Donc $\mu{}h = \mu{}f - \filterset = Z - \filterset \subset X$\\
+
+	\noindent
+	Ainsi, on a prouvé que $Z - \filterset$ est un pré-point fixe à $\mu{}_{s'}$, la plus petite solution de $E_{s'}$
 \end{proof}
 \\
 \\
